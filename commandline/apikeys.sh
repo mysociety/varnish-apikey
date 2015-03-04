@@ -51,11 +51,6 @@ usage() {
 	echo " block-apikey             apikey time"
 	echo " unblock-apikey           apikey"
 	echo " clear-database"
-	echo " add-group                group-name"
-	echo " delete-group             group-name"
-	echo " set-group                user-name group-name"
-	echo " clear-group              user-name"
-	echo " view-group               group-name"
 
 	exit ${1}
 }
@@ -92,10 +87,8 @@ view-user() {
 	key=$(redis-cli get user:${1}:key)
 	apis=$(redis-cli smembers key:${key}:api-list)
 	blocked=$(redis-cli get key:${key}:blocked)
-	group=$(redis-cli get key:${key}:group)
 	msg "user-name: ${1}"
 	msg "apikey: ${key}"
-	msg "group: ${group}"
 	msg "api list:"
 	msg ${apis}
 	msg "blocked: ${blocked}"
@@ -133,39 +126,6 @@ unblock-apikey() {
 
 clear-database() {
 	redis-cli flushdb
-}
-
-add-group() {
-	redis-cli set group:${1}:valid 1
-	redis-cli sadd groups "${1}"
-}
-
-delete-group() {
-	redis-cli del group:${1}:valid
-	redis-cli srem groups "${1}"
-}
-
-set-group() {
-	key=$(redis-cli get user:${1}:key)
-	redis-cli set user:${1}:group ${2}
-	redis-cli set key:${key}:group ${2}
-	redis-cli sadd group:${2}:users "${1}"
-}
-
-clear-group() {
-	key=$(redis-cli get user:${1}:key)
-	group=$(redis-cli get user:${1}:group)
-	redis-cli del user:${1}:group
-	redis-cli del key:${key}:group
-	redis-cli srem group:${group}:users "${1}"
-}
-
-view-group() {
-	valid=$(redis-cli get group:${1}:valid)
-	users=$(redis-cli smembers group:${1}:users)
-	msg "is-valid: ${valid}"
-	msg "user:"
-	msg ${users}
 }
 
 
@@ -221,26 +181,6 @@ case "${1}" in
 	clear-database)
 		number_of_args ${#} 1
 		clear-database
-		;;
-	add-group)
-		number_of_args ${#} 2
-		add-group ${2}
-		;;
-	delete-group)
-		number_of_args ${#} 2
-		delete-group ${2}
-		;;
-	set-group)
-		number_of_args ${#} 3
-		set-group ${2} ${3}
-		;;
-	clear-group)
-		number_of_args ${#} 2
-		clear-group ${2}
-		;;
-	view-group)
-		number_of_args ${#} 2
-		view-group ${2}
 		;;
 	help)
 		usage 0
