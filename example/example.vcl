@@ -27,7 +27,7 @@
 include "/etc/varnish/varnish-apikey.vcl";
 
 backend wikipedia {
-	.host = "208.80.152.201";
+	.host = "91.198.174.192";
 	.port = "80";
 }
 
