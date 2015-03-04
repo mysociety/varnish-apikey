@@ -4,6 +4,17 @@ varnish-apikey
 Originally from https://code.google.com/p/varnish-apikey/, forked from
 https://github.com/thecodeassassin/varnish-apikey and simplified.
 
+This is exactly as per the original varnish-apikey (so far), but with lots of
+the unfinished features removed. This version only does api key checking and
+blocking, no http referrer checking, throttling, user groups or token checking
+.
+
+This removes some of the more complicated dependencies, to the point
+that the whole Makefile and bundled libraries could also be removed.
+
+This also updates the Redis Varnish module used to the supported version,
+which can be installed independently from Github.
+
 Dependencies
 ------------
 (For Ubuntu/Debian)
