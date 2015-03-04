@@ -12,7 +12,7 @@ sudo apt-get install redis-server varnish libhiredis-dev
 ```
 
 **Redis**
-* redis-server - [redis](https://github.com/redis/hiredis)
+* redis-server
 * libhiredis-dev - [hiredis](https://github.com/redis/hiredis) - minimalistic C client for Redis
 
 **Varnish and Varnish modules**
