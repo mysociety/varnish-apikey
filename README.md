@@ -7,7 +7,9 @@ https://github.com/thecodeassassin/varnish-apikey and simplified.
 Dependencies
 ------------
 (For Ubuntu/Debian)
+```
 sudo apt-get install redis-server varnish libhiredis-dev
+```
 
 **Redis**
 * redis-server - [redis](https://github.com/redis/hiredis)
