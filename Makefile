@@ -60,21 +60,11 @@ compile:
 	tar -xzf antirez-hiredis-v0.10.1-29-g857b269.tar.gz
 	cd lib/antirez-hiredis-857b269/ && \
 	make
-# Compile redis plugin.
-	cd lib && \
-	tar -xzf zephirworks-libvmod-redis-ef73a48.tar.gz
-	cd lib/zephirworks-libvmod-redis-ef73a48/ && \
-	./autogen.sh && \
-	./configure VARNISHSRC=../varnish-3.0.2 VMODDIR=/usr/local/lib/varnish/vmods
-# Patch redis plugin to support pipelining
-	patch lib/zephirworks-libvmod-redis-ef73a48/src/vmod_redis.c lib/vmod_redis.c.pipelining.patch
-	patch lib/zephirworks-libvmod-redis-ef73a48/src/vmod_redis.vcc lib/vmod_redis.vcc.pipelining.patch
 
 install:
 	echo "You may need to \"sudo make install\""
 	cd lib/varnish-3.0.2/ && make install
 	cd lib/antirez-hiredis-857b269/ && make install
-	cd lib/zephirworks-libvmod-redis-ef73a48/ && make && make install
 # Install library so varnish can see it.
 	ln -sf /usr/local/lib/libhiredis.so.0.10 /usr/local/lib/varnish/
 
