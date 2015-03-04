@@ -65,8 +65,8 @@ compile:
 	tar -xzf zephirworks-libvmod-redis-ef73a48.tar.gz
 	cd lib/zephirworks-libvmod-redis-ef73a48/ && \
 	./autogen.sh && \
-	./configure VARNISHSRC=../varnish-3.0.2 VMODDIR=/usr/lib/varnish/vmods
-	
+	./configure VARNISHSRC=../varnish-3.0.2 VMODDIR=/usr/local/lib/varnish/vmods
+
 # Compile mhash.
 	cd lib && \
 	tar -xjf mhash-0.9.9.9.tar.bz2
@@ -80,7 +80,7 @@ compile:
 	patch lib/zephirworks-libvmod-redis-ef73a48/src/vmod_redis.vcc lib/vmod_redis.vcc.pipelining.patch
 	cd lib/varnish-libvmod-digest-6fa5034/ && \
 	./autogen.sh && \
-	./configure VARNISHSRC=../varnish-3.0.2 VMODDIR=/usr/lib/varnish/vmods
+	./configure VARNISHSRC=../varnish-3.0.2 VMODDIR=/usr/local/lib/varnish/vmods
 
 install:
 	echo "You may need to \"sudo make install\""
