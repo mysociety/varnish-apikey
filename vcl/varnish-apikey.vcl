@@ -33,7 +33,6 @@ C{
 
 import redis;
 import std;
-import digest;
 
 #
 # Public subroutine to be called from user code to validate the api.
@@ -50,8 +49,6 @@ sub validate_api {
 	if (req.http.restricted == "1") {
 		call apikey_check_apikey;
 		call apikey_check_throttling;
-		call apikey_check_referer;
-		call apikey_check_security;
 	}
 
 	# Delete the headers.
@@ -80,9 +77,6 @@ sub apikey_call_redis {
 	redis.push("INCR key:" + req.http.apikey + ":usage:" + req.http.apiname + ":count");
 	redis.push("GET key:" + req.http.apikey + ":usage:" + req.http.apiname + ":max");
 	redis.push("GET key:"  + req.http.apikey + ":usage:" + req.http.apiname + ":reset");
-	redis.push("GET key:"  + req.http.apikey + ":security:referer");
-	redis.push("GET key:"  + req.http.apikey + ":security:key");
-	redis.push("GET key:"  + req.http.apikey + ":security:timeout");
 
 	set req.http.restricted       = redis.pop();
 	set req.http.apikey_exists    = redis.pop();
@@ -92,9 +86,6 @@ sub apikey_call_redis {
 	set req.http.counter_count    = redis.pop();
 	set req.http.counter_max      = redis.pop();
 	set req.http.counter_reset    = redis.pop();
-	set req.http.security_referer = redis.pop();
-	set req.http.security_key     = redis.pop();
-	set req.http.security_timeout = redis.pop();
 }
 
 sub apikey_check_apikey {
@@ -140,62 +131,7 @@ sub apikey_check_throttling {
 	}
 }
 
-# curl --referer http://www.aaaa.bbb http://localhost:81/tomato?apikey=myapikey
-sub apikey_check_referer {
-	# Referer
-	if (req.http.security_referer && req.http.referer) {
-		# Compare main domain name (get aaa.bbb from www.aaa.bbb)
-		set req.http.tmp = regsub(req.http.referer, "^http://([^/^:]*).*", "\1");
-		if (req.http.security_referer != regsub(req.http.tmp, "^.*?([^.]+\.[^.]+)$", "\1")) {
-			error 401 "Wrong referer";
-		}
-	}
-}
-
-# Check that it works.
-#echo -n aaa127.0.0.1$(expr $(date +%s) / 60) | md5sum
-sub apikey_check_security {
-	# Token by IP.
-	if (req.http.security_key && !req.http.security_timeout) {
-		if (digest.hash_md5(req.http.security_key + client.ip) != req.http.token) {
-			error 401 "Wrong token. Correct token is: " +
-			    digest.hash_md5(req.http.security_key + client.ip) + ". Use md5(password + ip) to create the token.";
-		}
-	}
-
-	# Token by IP and time.
-	if (req.http.security_key && req.http.security_timeout) {
-		# Get time and save to headers.
-		C{
-			int timeout = atoi(VRT_GetHdr(sp, HDR_REQ, "\021security_timeout:"));
-			if (timeout <= 1 || timeout > 999999) {
-				timeout = 1;
-			}
-
-			struct timeval tv;
-			gettimeofday(&tv, NULL);
-			int t = tv.tv_sec / timeout;
-			char buf[100];
-			snprintf(buf, sizeof(buf), "%d", t);
-
-			VRT_SetHdr(sp, HDR_REQ, "\003t1:", buf, vrt_magic_string_end);
-			snprintf(buf, sizeof(buf), "%d", t - 1);
-			VRT_SetHdr(sp, HDR_REQ, "\003t2:", buf, vrt_magic_string_end);
-			snprintf(buf, sizeof(buf), "%d", t + 1);
-			VRT_SetHdr(sp, HDR_REQ, "\003t3:", buf, vrt_magic_string_end);
-		}C
-		if (digest.hash_md5(req.http.security_key + client.ip +
-				      req.http.t1) != req.http.token
-		      && digest.hash_md5(req.http.security_key + client.ip +
-					 req.http.t2) != req.http.token && digest.hash_md5(req.http.security_key + client.ip + req.http.t3) != req.http.token) {
-			error 401 "Wrong token. Correct token is: " +
-			    digest.hash_md5(req.http.security_key + client.ip + req.http.t1) + ". Use md5(password + ip + time) to create the token.";
-		}
-	}
-}
-
 sub apikey_unset_headers {
 	unset req.http.apiname;
 	unset req.http.apikey;
-	unset req.http.token;
 }

@@ -66,32 +66,17 @@ compile:
 	cd lib/zephirworks-libvmod-redis-ef73a48/ && \
 	./autogen.sh && \
 	./configure VARNISHSRC=../varnish-3.0.2 VMODDIR=/usr/local/lib/varnish/vmods
-
-# Compile mhash.
-	cd lib && \
-	tar -xjf mhash-0.9.9.9.tar.bz2
-	cd lib/mhash-0.9.9.9/ && \
-	./configure 
-# Compile digest plugin.
-	cd lib && \
-	tar -xzf varnish-libvmod-digest-0.3-1-g6fa5034.tar.gz 
-# Patch digest plugin to support pipelining
+# Patch redis plugin to support pipelining
 	patch lib/zephirworks-libvmod-redis-ef73a48/src/vmod_redis.c lib/vmod_redis.c.pipelining.patch
 	patch lib/zephirworks-libvmod-redis-ef73a48/src/vmod_redis.vcc lib/vmod_redis.vcc.pipelining.patch
-	cd lib/varnish-libvmod-digest-6fa5034/ && \
-	./autogen.sh && \
-	./configure VARNISHSRC=../varnish-3.0.2 VMODDIR=/usr/local/lib/varnish/vmods
 
 install:
 	echo "You may need to \"sudo make install\""
 	cd lib/varnish-3.0.2/ && make install
 	cd lib/antirez-hiredis-857b269/ && make install
 	cd lib/zephirworks-libvmod-redis-ef73a48/ && make && make install
-	cd lib/mhash-0.9.9.9/ && make && make install
-	cd lib/varnish-libvmod-digest-6fa5034/ && make && make install
 # Install library so varnish can see it.
 	ln -sf /usr/local/lib/libhiredis.so.0.10 /usr/local/lib/varnish/
-	ln -sf /usr/local/lib/libmhash.so.2 /usr/local/lib/varnish/
 
 install-php:
 	echo "You may need to \"sudo make install-php\""

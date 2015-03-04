@@ -50,12 +50,6 @@ usage() {
 	echo " unblock-user             user-name"
 	echo " block-apikey             apikey time"
 	echo " unblock-apikey           apikey"
-	echo " set-referer              user-name referer"
-	echo " delete-referer           user-name referer"
-	echo " set-security-key         user-name security-key"
-	echo " delete-security-key      user-name"
-	echo " set-security-timeout     user-name security-timeout"
-	echo " delete-security-timeout  user-name"
 	echo " clear-database"
 	echo " add-group                group-name"
 	echo " delete-group             group-name"
@@ -98,9 +92,6 @@ view-user() {
 	key=$(redis-cli get user:${1}:key)
 	apis=$(redis-cli smembers key:${key}:api-list)
 	blocked=$(redis-cli get key:${key}:blocked)
-	referer=$(redis-cli get key:${key}:security:referer)
-	skey=$(redis-cli get key:${key}:security:key)
-	stimeout=$(redis-cli get key:${key}:security:timeout)
 	group=$(redis-cli get key:${key}:group)
 	msg "user-name: ${1}"
 	msg "apikey: ${key}"
@@ -108,9 +99,6 @@ view-user() {
 	msg "api list:"
 	msg ${apis}
 	msg "blocked: ${blocked}"
-	msg "referer: ${referer}"
-	msg "security-key: ${skey}"
-	msg "security-timeout: ${stimeout}"
 }
 
 add-api() {
@@ -142,36 +130,6 @@ block-apikey() {
 
 unblock-apikey() {
 	redis-cli del key:${1}:blocked
-}
-
-set-referer() {
-	key=$(redis-cli get user:${1}:key)
-	redis-cli set key:${key}:security:referer ${2}
-}
-
-delete-referer() {
-	key=$(redis-cli get user:${1}:key)
-	redis-cli del key:${key}:security:referer
-}
-
-set-security-key() {
-	key=$(redis-cli get user:${1}:key)
-	redis-cli set key:${key}:security:key ${2}
-}
-
-delete-security-key() {
-	key=$(redis-cli get user:${1}:key)
-	redis-cli del key:${key}:security:key
-}
-
-set-security-timeout() {
-	key=$(redis-cli get user:${1}:key)
-	redis-cli set key:${key}:security:timeout ${2}
-}
-
-delete-security-timeout() {
-	key=$(redis-cli get user:${1}:key)
-	redis-cli del key:${key}:security:timeout
 }
 
 clear-database() {
@@ -260,30 +218,6 @@ case "${1}" in
 	unblock-apikey)
 		number_of_args ${#} 2
 		unblock-apikey ${2}
-		;;
-	set-referer)
-		number_of_args ${#} 3
-		set-referer ${2} ${3}
-		;;
-	delete-referer)
-		number_of_args ${#} 2
-		delete-referer ${2}
-		;;
-	set-security-key)
-		number_of_args ${#} 3
-		set-security-key ${2} ${3}
-		;;
-	delete-security-key)
-		number_of_args ${#} 2
-		delete-security-key ${2}
-		;;
-	set-security-timeout)
-		number_of_args ${#} 3
-		set-security-timeout ${2} ${3}
-		;;
-	delete-security-timeout)
-		number_of_args ${#} 2
-		delete-security-timeout ${2}
 		;;
 	clear-database)
 		number_of_args ${#} 1
