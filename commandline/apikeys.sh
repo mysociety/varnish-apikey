@@ -41,6 +41,8 @@ usage() {
 	echo "The functionalities are:"
 	echo " restrict-api             api-name"
 	echo " unrestrict-api           api-name"
+	echo " throttle-api             api-name"
+	echo " unthrottle-api           api-name"
 	echo " add-user                 user-name api-key"
 	echo " list-users"
 	echo " view-user                user-name"
@@ -69,6 +71,14 @@ restrict-api() {
 
 unrestrict-api() {
 	redis-cli del api:${1}:restricted
+}
+
+throttle-api() {
+	redis-cli set api:${1}:throttled 1
+}
+
+unthrottle-api-api() {
+	redis-cli del api:${1}:throttled
 }
 
 add-user() {
@@ -142,6 +152,14 @@ case "${1}" in
 	unrestrict-api)
 		number_of_args ${#} 2
 		unrestrict-api ${2}
+		;;
+	throttle-api)
+		number_of_args ${#} 2
+		throttle-api ${2}
+		;;
+	unthrottle-api)
+		number_of_args ${#} 2
+		unthrottle-api ${2}
 		;;
 	add-user)
 		number_of_args ${#} 3
