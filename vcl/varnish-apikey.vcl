@@ -52,11 +52,14 @@ sub validate_api {
 	# Get variables from redis.
 	call apikey_call_redis;
 
-	# Do the work.
+	# Check the key
 	if (req.http.restricted == "1") {
-		# Check there's a key and it's allowed to access this api
 		call apikey_check_apikey;
-		call apikey_check_apikey;
+	}
+
+	# Check the usage
+	if (req.http.throttled == "1") {
+		call apikey_check_throttling;
 	}
 
 	# Delete the headers.
@@ -77,6 +80,7 @@ sub apikey_call_redis {
 	redis.pipeline();
 
 	redis.push("GET api:" + req.http.apiname + ":restricted");
+	redis.push("GET api:" + req.http.apiname + ":throttled");
 	redis.push("GET key:" + req.http.apikey);
 	redis.push("GET key:" + req.http.apikey + ":blocked");
 	redis.push("GET key:" + req.http.apikey + ":api:all");
@@ -86,6 +90,7 @@ sub apikey_call_redis {
 	redis.push("GET key:"  + req.http.throttle_identity + ":usage:" + req.http.apiname + ":reset");
 
 	set req.http.restricted       = redis.pop();
+	set req.http.throttled       = redis.pop();
 	set req.http.apikey_exists    = redis.pop();
 	set req.http.apikey_blocked   = redis.pop();
 	set req.http.apikey_all       = redis.pop();
