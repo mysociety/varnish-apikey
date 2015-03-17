@@ -114,6 +114,7 @@ block-user() {
 unblock-user() {
 	key=$(redis-cli get user:${1}:key)
 	redis-cli del key:${key}:blocked
+	redis-cli set key:${key}:usage:reset 1
 }
 
 block-apikey() {
