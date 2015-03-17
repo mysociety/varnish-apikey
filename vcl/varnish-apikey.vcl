@@ -146,4 +146,14 @@ sub apikey_check_throttling {
 sub apikey_unset_headers {
 	unset req.http.apiname;
 	unset req.http.apikey;
+	unset req.http.throttle_identity
+	unset req.http.restricted;
+	unset req.http.throttled;
+	unset req.http.apikey_exists;
+	unset req.http.apikey_blocked;
+	unset req.http.apikey_all;
+	unset req.http.apikey_api;
+	unset req.http.counter_count;
+	unset req.http.counter_max;
+	unset req.http.counter_reset;
 }
