@@ -1,4 +1,4 @@
-varnishtest "Test throttled client IP"
+varnishtest "Test throttled client IP with default max"
 
 server s1 {
   rxreq
@@ -15,20 +15,19 @@ varnish v1 -vcl {
 
   sub recognize_apiname_apikey_token {
     # Identify api
-    set req.http.apiname = "testthrottledbyipapi";
+    set req.http.apiname = "testthrottledbyipapidefault";
     # Save apikey
     set req.http.apikey = regsub(req.url, ".*[?;]apikey=([^;]*).*", "\1");
   }
 
   sub set_up {
     redis.send("FLUSHDB");
-    redis.send("SET api:testthrottledbyipapi:throttled 1");
-    redis.send("SET api:testthrottledbyipapi:counter:time 60");
-    redis.send("SET api:testthrottledbyipapi:blocked:time 60");
-    redis.send("SET api:testthrottledbyipapi:default_max 60");
-
-    # Set a maximum number of calls to test the throttling works
-    redis.send("SET key:127.0.0.1:usage:testthrottledbyipapi:max 1");
+    redis.send("SET api:testthrottledbyipapidefault:throttled 1");
+    redis.send("SET api:testthrottledbyipapidefault:counter:time 60");
+    redis.send("SET api:testthrottledbyipapidefault:blocked:time 60");
+    # Set the default_max for the api to 1, but don't set a specific max for
+    # the user
+    redis.send("SET api:testthrottledbyipapidefault:default_max 1");
   }
 
   sub vcl_init {

@@ -21,21 +21,18 @@ varnish v1 -vcl {
   }
 
   sub set_up {
+    redis.send("FLUSHDB");
     redis.send("SET api:testapi:restricted 1");
   }
 
-  sub tear_down {
-    redis.send("FLUSHDB");
+  sub vcl_init {
+    call set_up;
   }
 
   sub vcl_recv {
-    call set_up;
-
     # Validate apikey using apikey library.
     call validate_api;
     set req.backend = default;
-
-    call tear_down;
   }
 } -start
 

@@ -21,24 +21,22 @@ varnish v1 -vcl {
   }
 
   sub set_up {
+    redis.send("FLUSHDB");
     redis.send("SET api:testapiipblocked:throttled 1");
     redis.send("SET api:testapiipblocked:counter:time 60");
     redis.send("SET api:testapiipblocked:blocked:time 60");
+    redis.send("SET api:testapiipblocked:default_max 60");
     redis.send("SETEX key:127.0.0.1:api:testapiipblocked:blocked 60 1");
   }
 
-  sub tear_down {
-    redis.send("FLUSHDB");
+  sub vcl_init {
+    call set_up;
   }
 
   sub vcl_recv {
-    call set_up;
-
     # Validate apikey using apikey library.
     call validate_api;
     set req.backend = default;
-
-    call tear_down;
   }
 } -start
 
