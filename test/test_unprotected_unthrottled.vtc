@@ -1,0 +1,38 @@
+varnishtest "Test un-protected, un-throttled"
+
+server s1 {
+  rxreq
+  txresp -body "hello world"
+} -start
+
+varnish v1 -vcl {
+  include "${pwd}/vcl/varnish-apikey.vcl";
+
+  backend default {
+    .host = "${s1_addr}";
+    .port = "${s1_port}";
+  }
+
+  sub recognize_apiname_apikey_token {
+      # Identify api
+      set req.http.apiname = "test";
+      # Save apikey
+      set req.http.apikey = regsub(req.url, ".*[?;]apikey=([^;]*).*", "\1");
+  }
+
+  sub vcl_recv {
+      # Validate apikey using apikey library.
+      call validate_api;
+      set req.backend = default;
+  }
+} -start
+
+client c1 {
+  txreq
+  rxresp
+
+  expect resp.status == 200
+  expect resp.bodylen == 11
+} -run
+
+varnish v1 -expect client_req == 1
