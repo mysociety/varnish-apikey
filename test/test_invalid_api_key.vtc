@@ -22,12 +22,8 @@ varnish v1 -vcl {
 
   sub set_up {
     redis.send("SET api:testapi:restricted 1");
-    redis.send("SADD users testuser");
-    redis.send("SET user:testuser:key testapikey");
     redis.send("SET key:testapikey 1");
-    redis.send("SET key:testapikey:user testuser");
     redis.send("SET key:testapikey:api:testapi 1");
-    redis.send("SADD key:testapikey:api-list testapi");
   }
 
   sub tear_down {

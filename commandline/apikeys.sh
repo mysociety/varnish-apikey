@@ -43,13 +43,8 @@ usage() {
 	echo " unrestrict-api           api-name"
 	echo " throttle-api             api-name"
 	echo " unthrottle-api           api-name"
-	echo " add-user                 user-name api-key"
-	echo " list-users"
-	echo " view-user                user-name"
-	echo " add-api                  user-name api-name"
-	echo " delete-api               user-name api-name"
-	echo " block-user               user-name time"
-	echo " unblock-user             user-name"
+	echo " add-api                  key api-name"
+	echo " delete-api               key api-name"
 	echo " block-apikey             apikey time"
 	echo " unblock-apikey           apikey"
 	echo " clear-database"
@@ -81,50 +76,12 @@ unthrottle-api-api() {
 	redis-cli del api:${1}:throttled
 }
 
-add-user() {
-	msg "TODO: check if user exists"
-	redis-cli sadd users "${1}"
-	redis-cli set user:${1}:key ${2}
-	redis-cli set key:${2} 1
-	redis-cli set key:${2}:user ${1}
-}
-
-list-users() {
-	redis-cli smembers users
-}
-
-view-user() {
-	key=$(redis-cli get user:${1}:key)
-	apis=$(redis-cli smembers key:${key}:api-list)
-	blocked=$(redis-cli get key:${key}:blocked)
-	msg "user-name: ${1}"
-	msg "apikey: ${key}"
-	msg "api list:"
-	msg ${apis}
-	msg "blocked: ${blocked}"
-}
-
 add-api() {
-	key=$(redis-cli get user:${1}:key)
-	redis-cli set key:${key}:api:${2} 1
-	redis-cli sadd key:${key}:api-list ${2}
+	redis-cli set key:${1}:api:${2} 1
 }
 
 delete-api() {
-	key=$(redis-cli get user:${1}:key)
-	redis-cli del key:${key}:api:${2}
-	redis-cli srem key:${key}:api-list ${2}
-}
-
-block-user() {
-	key=$(redis-cli get user:${1}:key)
-	redis-cli setex key:${key}:blocked ${2} 1
-}
-
-unblock-user() {
-	key=$(redis-cli get user:${1}:key)
-	redis-cli del key:${key}:blocked
-	redis-cli set key:${key}:usage:reset 1
+	redis-cli del key:${1}:api:${2}
 }
 
 block-apikey() {
@@ -161,18 +118,6 @@ case "${1}" in
 		number_of_args ${#} 2
 		unthrottle-api ${2}
 		;;
-	add-user)
-		number_of_args ${#} 3
-		add-user ${2} ${3}
-		;;
-	list-users)
-		number_of_args ${#} 1
-		list-users
-		;;
-	view-user)
-		number_of_args ${#} 2
-		view-user ${2}
-		;;
 	add-api)
 		number_of_args ${#} 3
 		add-api ${2} ${3}
@@ -180,14 +125,6 @@ case "${1}" in
 	delete-api)
 		number_of_args ${#} 3
 		delete-api ${2} ${3}
-		;;
-	block-user)
-		number_of_args ${#} 3
-		block-user ${2} ${3}
-		;;
-	unblock-user)
-		number_of_args ${#} 2
-		unblock-user ${2}
 		;;
 	block-apikey)
 		number_of_args ${#} 3
