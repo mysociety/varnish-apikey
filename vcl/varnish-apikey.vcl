@@ -129,7 +129,6 @@ sub apikey_check_throttling {
 		redis.send("SET key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":count 0");
 		# Set timer to reset the counter
 		redis.send("SETEX key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":reset " + req.http.counter_time + " 1");
-		set req.http.throttle_blocked = "0";
 	} else {
 		# If exceeded number of calls then block.
 		if (std.integer(req.http.counter_count, 0) > std.integer(req.http.counter_max, 0)) {
