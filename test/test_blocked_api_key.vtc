@@ -21,6 +21,8 @@ varnish v1 -vcl {
   }
 
   sub set_up {
+    # We have to restrict this api too, so that the api key is used to
+    # identify the user
     redis.send("SET api:testapi:restricted 1");
     redis.send("SET api:testapi:throttled 1");
     redis.send("SET key:testapikeyblocked 1");
