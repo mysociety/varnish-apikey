@@ -80,14 +80,12 @@ sub apikey_call_redis_apikey {
 	redis.push("GET api:" + req.http.apiname + ":restricted");
 	redis.push("GET api:" + req.http.apiname + ":throttled");
 	redis.push("GET key:" + req.http.apikey);
-	redis.push("GET key:" + req.http.apikey + ":blocked");
 	redis.push("GET key:" + req.http.apikey + ":api:all");
 	redis.push("GET key:" + req.http.apikey + ":api:" + req.http.apiname);
 
 	set req.http.restricted       = redis.pop();
 	set req.http.throttled        = redis.pop();
 	set req.http.apikey_exists    = redis.pop();
-	set req.http.apikey_blocked   = redis.pop();
 	set req.http.apikey_all       = redis.pop();
 	set req.http.apikey_api       = redis.pop();
 }
@@ -103,11 +101,12 @@ sub apikey_call_redis_throttling {
 	# Use pipelining mode (make all calls first and then get results in bulk).
 
 	redis.pipeline();
-
+	redis.push("GET key:" + req.http.throttle_identity + ":blocked");
 	redis.push("INCR key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":count");
 	redis.push("GET key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":max");
 	redis.push("GET key:"  + req.http.throttle_identity + ":usage:" + req.http.apiname + ":reset");
 
+	set req.http.throttle_blocked = redis.pop();
 	set req.http.counter_count    = redis.pop();
 	set req.http.counter_max      = redis.pop();
 	set req.http.counter_reset    = redis.pop();
@@ -117,11 +116,6 @@ sub apikey_check_apikey {
 	# Check if api key exists.
 	if (req.http.apikey_exists != "1") {
 		error 401 "Unknown api key.";
-	}
-
-	# Check if api key is blocked.
-	if (req.http.apikey_blocked == "1") {
-		error 401 "Api key teporarily blocked.";
 	}
 
 	# Check if is allowed to use the api.
@@ -154,6 +148,10 @@ sub apikey_check_throttling {
 			redis.pop2();
 		}
 	}
+	# Check if user is blocked.
+	if (req.http.throttle_blocked == "1") {
+		error 401 "Api key teporarily blocked.";
+	}
 }
 
 sub apikey_unset_headers {
@@ -162,10 +160,10 @@ sub apikey_unset_headers {
 	unset req.http.restricted;
 	unset req.http.throttled;
 	unset req.http.apikey_exists;
-	unset req.http.apikey_blocked;
 	unset req.http.apikey_all;
 	unset req.http.apikey_api;
 	if (req.http.throttled == "1") {
+		unset req.http.throttle_blocked;
 		unset req.http.blocked_time;
 		unset req.http.counter_time;
 		unset req.http.throttle_identity;
