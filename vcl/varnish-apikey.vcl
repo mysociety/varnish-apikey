@@ -79,13 +79,11 @@ sub apikey_call_redis_apikey {
 
 	redis.push("GET api:" + req.http.apiname + ":restricted");
 	redis.push("GET api:" + req.http.apiname + ":throttled");
-	redis.push("GET key:" + req.http.apikey);
 	redis.push("GET key:" + req.http.apikey + ":api:" + req.http.apiname);
 
 	set req.http.restricted       = redis.pop();
 	set req.http.throttled        = redis.pop();
 	set req.http.apikey_exists    = redis.pop();
-	set req.http.apikey_api       = redis.pop();
 }
 
 # Call redis and get throttling setup
@@ -114,11 +112,6 @@ sub apikey_check_apikey {
 	# Check if api key exists.
 	if (req.http.apikey_exists != "1") {
 		error 401 "Unknown api key.";
-	}
-
-	# Check if is allowed to use the api.
-	if (req.http.apikey_api != "1") {
-		error 401 "Api not allowed for this api key.";
 	}
 }
 
@@ -151,7 +144,6 @@ sub apikey_unset_headers {
 	unset req.http.restricted;
 	unset req.http.throttled;
 	unset req.http.apikey_exists;
-	unset req.http.apikey_api;
 	if (req.http.throttled == "1") {
 		unset req.http.throttle_blocked;
 		unset req.http.blocked_time;

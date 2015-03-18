@@ -22,7 +22,6 @@ varnish v1 -vcl {
 
   sub set_up {
     redis.send("SET api:testapi:restricted 1");
-    redis.send("SET key:testapikey 1");
     redis.send("SET key:testapikey:api:testapi 1");
   }
 
