@@ -80,7 +80,7 @@ the `varnishtest` program included with varnish. However, we recommend you use
 [vtctrans](https://github.com/xcir/vtctrans) to make the output more
 understandable. This is just a simple python file which you can run like so:
 ```
-python <path-to>/vtctrans.py test/test_unprotected_unthrottled.vtc
+python <path-to>/vtctrans.py test/*.vtc
 ```
 Because of the way `varnishtest` does includes, you must run this from the
 project root directory, otherwise it won't find the .vcl file to test.
