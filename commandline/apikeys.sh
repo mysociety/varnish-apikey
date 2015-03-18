@@ -47,6 +47,8 @@ usage() {
 	echo " delete-api               apikey api-name"
 	echo " block-apikey             apikey api-name time"
 	echo " unblock-apikey           apikey api-name"
+	echo " set-apikey-limit         apikey api-name limit"
+	echo " remove-apikey-limit      apikey api-name"
 	echo " clear-database"
 
 	exit ${1}
@@ -96,6 +98,14 @@ unblock-apikey() {
 	redis-cli del key:${1}:api:${2}:blocked
 }
 
+set-apikey-limit() {
+	redis-cli set key:${1}:usage:${2}:max ${3} 1
+}
+
+remove-apikey-limit() {
+	redis-cli del key:${1}:usage:${2}:max
+}
+
 clear-database() {
 	redis-cli flushdb
 }
@@ -137,6 +147,14 @@ case "${1}" in
 	unblock-apikey)
 		number_of_args ${#} 3
 		unblock-apikey ${2} ${3}
+		;;
+	set-apikey-limit)
+		number_of_args ${#} 4
+		block-apikey ${2} ${3} ${4}
+		;;
+	remove-apikey-limit)
+		number_of_args ${#} 3
+		block-apikey ${2} ${3}
 		;;
 	clear-database)
 		number_of_args ${#} 1
