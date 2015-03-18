@@ -99,7 +99,7 @@ sub apikey_call_redis_throttling {
 	redis.push("GET key:" + req.http.throttle_identity + ":api:" + req.http.apiname + ":blocked");
 	redis.push("INCR key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":count");
 	redis.push("GET key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":max");
-	redis.push("GET key:"  + req.http.throttle_identity + ":usage:" + req.http.apiname + ":reset");
+	redis.push("GET key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":reset");
 
 	set req.http.throttle_blocked = redis.pop();
 	set req.http.counter_count    = redis.pop();
