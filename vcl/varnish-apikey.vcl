@@ -99,7 +99,7 @@ sub apikey_call_redis_throttling {
 	# Use pipelining mode (make all calls first and then get results in bulk).
 
 	redis.pipeline();
-	redis.push("GET key:" + req.http.throttle_identity + ":blocked");
+	redis.push("GET key:" + req.http.throttle_identity + ":api:" + req.http.apiname + ":blocked");
 	redis.push("INCR key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":count");
 	redis.push("GET key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":max");
 	redis.push("GET key:"  + req.http.throttle_identity + ":usage:" + req.http.apiname + ":reset");
@@ -133,7 +133,7 @@ sub apikey_check_throttling {
 		# If exceeded number of calls then block.
 		if (std.integer(req.http.counter_count, 0) > std.integer(req.http.counter_max, 0)) {
 			# Block api key for some time
-			redis.send("SETEX key:" + req.http.throttle_identity + ":blocked " + req.http.blocked_time + " 1");
+			redis.send("SETEX key:" + req.http.throttle_identity + ":api:" + req.http.apiname + ":blocked " + req.http.blocked_time + " 1");
 			# Reset timer
 			redis.send("DEL key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":reset");
 			set req.http.throttle_blocked = "1";

@@ -43,10 +43,10 @@ usage() {
 	echo " unrestrict-api           api-name"
 	echo " throttle-api             api-name"
 	echo " unthrottle-api           api-name"
-	echo " add-api                  key api-name"
-	echo " delete-api               key api-name"
-	echo " block-apikey             apikey time"
-	echo " unblock-apikey           apikey"
+	echo " add-api                  apikey api-name"
+	echo " delete-api               apikey api-name"
+	echo " block-apikey             apikey api-name time"
+	echo " unblock-apikey           apikey api-name"
 	echo " clear-database"
 
 	exit ${1}
@@ -85,11 +85,11 @@ delete-api() {
 }
 
 block-apikey() {
-	redis-cli set key:${1}:blocked ${2} 1
+	redis-cli set key:${1}:api:${2}:blocked ${3} 1
 }
 
 unblock-apikey() {
-	redis-cli del key:${1}:blocked
+	redis-cli del key:${1}:api:${2}:blocked
 }
 
 clear-database() {
@@ -127,12 +127,12 @@ case "${1}" in
 		delete-api ${2} ${3}
 		;;
 	block-apikey)
-		number_of_args ${#} 3
-		block-apikey ${2} ${3}
+		number_of_args ${#} 4
+		block-apikey ${2} ${3} ${4}
 		;;
 	unblock-apikey)
-		number_of_args ${#} 2
-		unblock-apikey ${2}
+		number_of_args ${#} 3
+		unblock-apikey ${2} ${3}
 		;;
 	clear-database)
 		number_of_args ${#} 1
