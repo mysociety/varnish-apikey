@@ -127,25 +127,19 @@ sub apikey_check_apikey {
 sub apikey_check_throttling {
 	# Check if should reset throttling counter.
 	if (req.http.counter_reset != "1") {
-		redis.pipeline();
 		# Reset counter.
-		redis.push("SET key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":count 0");
+		redis.send("SET key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":count 0");
 		# Set timer to reset the counter
-		redis.push("SETEX key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":reset " + req.http.counter_time + " 1");
-		# Ignore results
-		redis.pop2();
-		redis.pop2();
+		redis.send("SETEX key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":reset " + req.http.counter_time + " 1");
+		set req.http.throttle_blocked = "0";
 	} else {
 		# If exceeded number of calls then block.
 		if (std.integer(req.http.counter_count, 0) > std.integer(req.http.counter_max, 0)) {
-			redis.pipeline();
 			# Block api key for some time
-			redis.push("SETEX key:" + req.http.throttle_identity + ":blocked " + req.http.blocked_time + " 1");
+			redis.send("SETEX key:" + req.http.throttle_identity + ":blocked " + req.http.blocked_time + " 1");
 			# Reset timer
-			redis.push("DEL key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":reset");
-			# Ignore results
-			redis.pop2();
-			redis.pop2();
+			redis.send("DEL key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":reset");
+			set req.http.throttle_blocked = "1";
 		}
 	}
 	# Check if user is blocked.
