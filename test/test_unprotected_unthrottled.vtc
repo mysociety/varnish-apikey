@@ -15,13 +15,14 @@ varnish v1 -vcl {
 
   sub recognize_apiname_apikey_token {
       # Identify api
-      set req.http.apiname = "testapi";
+      set req.http.apiname = "testunprotectedapi";
       # Save apikey
       set req.http.apikey = regsub(req.url, ".*[?;]apikey=([^;]*).*", "\1");
   }
 
   sub vcl_recv {
       # Validate apikey using apikey library.
+      # Note - the api has't been protected in any way
       call validate_api;
       set req.backend = default;
   }

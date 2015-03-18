@@ -1,0 +1,55 @@
+varnishtest "Test un-protected, un-throttled"
+
+server s1 {
+  rxreq
+  txresp -body "hello world"
+} -start
+
+varnish v1 -vcl {
+  include "${pwd}/vcl/varnish-apikey.vcl";
+
+  backend default {
+    .host = "${s1_addr}";
+    .port = "${s1_port}";
+  }
+
+  sub recognize_apiname_apikey_token {
+    # Identify api
+    set req.http.apiname = "testapi";
+    # Save apikey
+    set req.http.apikey = regsub(req.url, ".*[?;]apikey=([^;]*).*", "\1");
+  }
+
+  sub set_up {
+    redis.send("SET api:testapi:restricted 1");
+    redis.send("SADD users testuser");
+    redis.send("SET user:testuser:key testapikey");
+    redis.send("SET key:testapikey 1");
+    redis.send("SET key:testapikey:user testuser");
+    redis.send("SET key:testapikey:api:testapi 1");
+    redis.send("SADD key:testapikey:api-list testapi");
+  }
+
+  sub tear_down {
+    redis.send("FLUSHDB");
+  }
+
+  sub vcl_recv {
+    call set_up;
+
+    # Validate apikey using apikey library.
+    call validate_api;
+    set req.backend = default;
+
+    call tear_down;
+  }
+} -start
+
+client c1 {
+  txreq -url "?apikey=testapikey2"
+  rxresp
+
+  expect resp.status == 401
+} -run
+
+varnish v1 -expect client_req == 1
