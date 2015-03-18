@@ -90,6 +90,7 @@ sub apikey_call_redis_apikey {
 sub apikey_call_redis_throttling {
 	set req.http.blocked_time   = redis.call("GET api:" + req.http.apiname + ":blocked:time");
 	set req.http.counter_time   = redis.call("GET api:" + req.http.apiname + ":counter:time");
+	set req.http.default_max    = redis.call("GET api:" + req.http.apiname + ":default_max");
 
 	# Per api.
 	# Use pipelining mode (make all calls first and then get results in bulk).
@@ -104,6 +105,12 @@ sub apikey_call_redis_throttling {
 	set req.http.counter_count    = redis.pop();
 	set req.http.counter_max      = redis.pop();
 	set req.http.counter_reset    = redis.pop();
+
+	# If there's no max set for this particular user (likely if there's no
+	# apikey for example) set the max to the default for the api.
+	if (!req.http.counter_max) {
+		set req.http.counter_max = req.http.default_max;
+	}
 }
 
 sub apikey_check_apikey {
@@ -121,13 +128,16 @@ sub apikey_check_throttling {
 		# Set timer to reset the counter
 		redis.send("SETEX key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":reset " + req.http.counter_time + " 1");
 	} else {
-		# If exceeded number of calls then block.
-		if (std.integer(req.http.counter_count, 0) > std.integer(req.http.counter_max, 0)) {
-			# Block api key for some time
-			redis.send("SETEX key:" + req.http.throttle_identity + ":api:" + req.http.apiname + ":blocked " + req.http.blocked_time + " 1");
-			# Reset timer
-			redis.send("DEL key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":reset");
-			set req.http.throttle_blocked = "1";
+		# If there's a max, and the user has exceeded the number of calls then
+		# block them.
+		if(req.http.counter_max) {
+			if (std.integer(req.http.counter_count, 0) > std.integer(req.http.counter_max, 0)) {
+				# Block api key for some time
+				redis.send("SETEX key:" + req.http.throttle_identity + ":api:" + req.http.apiname + ":blocked " + req.http.blocked_time + " 1");
+				# Reset timer
+				redis.send("DEL key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":reset");
+				set req.http.throttle_blocked = "1";
+			}
 		}
 	}
 	if (req.http.throttle_blocked == "1") {
@@ -145,6 +155,7 @@ sub apikey_unset_headers {
 		unset req.http.throttle_blocked;
 		unset req.http.blocked_time;
 		unset req.http.counter_time;
+		unset req.http.default_max;
 		unset req.http.throttle_identity;
 		unset req.http.counter_count;
 		unset req.http.counter_max;
