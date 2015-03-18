@@ -1,0 +1,35 @@
+varnishtest "Test unrecognised APIs"
+
+server s1 {
+  rxreq
+  txresp -body "hello world"
+} -start
+
+varnish v1 -vcl {
+  include "${pwd}/vcl/varnish-apikey.vcl";
+
+  backend default {
+    .host = "${s1_addr}";
+    .port = "${s1_port}";
+  }
+
+  sub recognize_apiname_apikey_token {
+      # Purposely doing nothing
+  }
+
+  sub vcl_recv {
+      # Validate apikey using apikey library.
+      call validate_api;
+      set req.backend = default;
+  }
+} -start
+
+client c1 {
+  txreq
+  rxresp
+
+  expect resp.status == 200
+  expect resp.bodylen == 11
+} -run
+
+varnish v1 -expect client_req == 1
