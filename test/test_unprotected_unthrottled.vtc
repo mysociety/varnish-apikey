@@ -15,7 +15,7 @@ varnish v1 -vcl {
 
   sub recognize_apiname_apikey_token {
       # Identify api
-      set req.http.apiname = "test";
+      set req.http.apiname = "testapi";
       # Save apikey
       set req.http.apikey = regsub(req.url, ".*[?;]apikey=([^;]*).*", "\1");
   }
