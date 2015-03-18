@@ -1,4 +1,4 @@
-varnishtest "Test un-protected, un-throttled"
+varnishtest "Test invalid api key"
 
 server s1 {
   rxreq
