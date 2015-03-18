@@ -42,15 +42,19 @@ sub validate_api {
 	# headers: apiname, apikey, token
 	call recognize_apiname_apikey_token;
 
-	# Determine how to throttle the request (by api key or client ip)
-	if (req.http.apikey_exists == "1") {
-		set req.http.throttle_identity = req.http.apikey;
-	} else {
-		set req.http.throttle_identity = client.ip;
-	}
+	# Get apikey variables from redis.
+	call apikey_call_redis_apikey;
 
-	# Get variables from redis.
-	call apikey_call_redis;
+	# Determine how to throttle the request (by api key or client ip)
+	if (req.http.throttled == "1") {
+		if (req.http.apikey_exists == "1") {
+			set req.http.throttle_identity = req.http.apikey;
+		} else {
+			set req.http.throttle_identity = client.ip;
+		}
+		# Get throttling variables from redis.
+		call apikey_call_redis_throttling;
+	}
 
 	# Check the key
 	if (req.http.restricted == "1") {
@@ -67,13 +71,7 @@ sub validate_api {
 }
 
 # Call redis and get all keys.
-sub apikey_call_redis {
-
-	# Settings. Hardcoded for a moment. Will be read from database in the future.
-
-	set req.http.blocked_time   = "60"; #redis.call("GET settings:blocked:time");
-	set req.http.counter_time   = "60"; #redis.call("GET key:" + req.http.apikey + ":usage:" + req.http.apiname + ":time");
-
+sub apikey_call_redis_apikey {
 	# Per api.
 	# Use pipelining mode (make all calls first and then get results in bulk).
 
@@ -85,16 +83,31 @@ sub apikey_call_redis {
 	redis.push("GET key:" + req.http.apikey + ":blocked");
 	redis.push("GET key:" + req.http.apikey + ":api:all");
 	redis.push("GET key:" + req.http.apikey + ":api:" + req.http.apiname);
-	redis.push("INCR key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":count");
-	redis.push("GET key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":max");
-	redis.push("GET key:"  + req.http.throttle_identity + ":usage:" + req.http.apiname + ":reset");
 
 	set req.http.restricted       = redis.pop();
-	set req.http.throttled       = redis.pop();
+	set req.http.throttled        = redis.pop();
 	set req.http.apikey_exists    = redis.pop();
 	set req.http.apikey_blocked   = redis.pop();
 	set req.http.apikey_all       = redis.pop();
 	set req.http.apikey_api       = redis.pop();
+}
+
+# Call redis and get throttling setup
+sub apikey_call_redis_throttling {
+	# Settings. Hardcoded for a moment. Will be read from database in the future.
+
+	set req.http.blocked_time   = "60"; #redis.call("GET settings:blocked:time");
+	set req.http.counter_time   = "60"; #redis.call("GET key:" + req.http.apikey + ":usage:" + req.http.apiname + ":time");
+
+	# Per api.
+	# Use pipelining mode (make all calls first and then get results in bulk).
+
+	redis.pipeline();
+
+	redis.push("INCR key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":count");
+	redis.push("GET key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":max");
+	redis.push("GET key:"  + req.http.throttle_identity + ":usage:" + req.http.apiname + ":reset");
+
 	set req.http.counter_count    = redis.pop();
 	set req.http.counter_max      = redis.pop();
 	set req.http.counter_reset    = redis.pop();
@@ -146,14 +159,16 @@ sub apikey_check_throttling {
 sub apikey_unset_headers {
 	unset req.http.apiname;
 	unset req.http.apikey;
-	unset req.http.throttle_identity
+	unset req.http.throttle_identity;
 	unset req.http.restricted;
 	unset req.http.throttled;
 	unset req.http.apikey_exists;
 	unset req.http.apikey_blocked;
 	unset req.http.apikey_all;
 	unset req.http.apikey_api;
-	unset req.http.counter_count;
-	unset req.http.counter_max;
-	unset req.http.counter_reset;
+	if (req.http.throttled == "1") {
+		unset req.http.counter_count;
+		unset req.http.counter_max;
+		unset req.http.counter_reset;
+	}
 }
