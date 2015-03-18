@@ -88,10 +88,8 @@ sub apikey_call_redis_apikey {
 
 # Call redis and get throttling setup
 sub apikey_call_redis_throttling {
-	# Settings. Hardcoded for a moment. Will be read from database in the future.
-
-	set req.http.blocked_time   = "60"; #redis.call("GET settings:blocked:time");
-	set req.http.counter_time   = "60"; #redis.call("GET key:" + req.http.apikey + ":usage:" + req.http.apiname + ":time");
+	set req.http.blocked_time   = redis.call("GET api:" + req.http.apiname + ":blocked:time");
+	set req.http.counter_time   = redis.call("GET api:" + req.http.apiname + ":counter:time");
 
 	# Per api.
 	# Use pipelining mode (make all calls first and then get results in bulk).
@@ -132,9 +130,8 @@ sub apikey_check_throttling {
 			set req.http.throttle_blocked = "1";
 		}
 	}
-	# Check if user is blocked.
 	if (req.http.throttle_blocked == "1") {
-		error 401 "Api key teporarily blocked.";
+		error 401 "Api key temporarily blocked.";
 	}
 }
 

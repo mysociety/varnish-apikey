@@ -22,7 +22,9 @@ varnish v1 -vcl {
 
   sub set_up {
     redis.send("SET api:testapiipblocked:throttled 1");
-    redis.send("SET key:127.0.0.1:blocked 1");
+    redis.send("SET api:testapiipblocked:counter:time 60");
+    redis.send("SET api:testapiipblocked:blocked:time 60");
+    redis.send("SETEX key:127.0.0.1:api:testapiipblocked:blocked 60 1");
   }
 
   sub tear_down {

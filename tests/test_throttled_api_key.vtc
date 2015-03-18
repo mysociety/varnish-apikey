@@ -1,0 +1,75 @@
+varnishtest "Test throttled api key"
+
+server s1 {
+  rxreq
+  txresp -body "hello world"
+} -start
+
+varnish v1 -vcl {
+  include "${pwd}/vcl/varnish-apikey.vcl";
+
+  backend default {
+    .host = "${s1_addr}";
+    .port = "${s1_port}";
+  }
+
+  sub recognize_apiname_apikey_token {
+    # Identify api
+    set req.http.apiname = "testthrottledapi";
+    # Save apikey
+    set req.http.apikey = regsub(req.url, ".*[?;]apikey=([^;]*).*", "\1");
+  }
+
+  sub set_up {
+    # We have to restrict this api too, so that the api key is used to
+    # identify the user
+    redis.send("SET api:testthrottledapi:restricted 1");
+    redis.send("SET api:testthrottledapi:throttled 1");
+    redis.send("SET api:testthrottledapi:counter:time 60");
+    redis.send("SET api:testthrottledapi:blocked:time 60");
+    redis.send("SET key:testapikeythrottled:api:testthrottledapi 1");
+    # Set a maximum number of calls to test the throttling works
+    redis.send("SET key:testapikeythrottled:usage:testthrottledapi:max 1");
+  }
+
+  sub tear_down {
+    redis.send("FLUSHDB");
+  }
+
+  sub vcl_recv {
+    call set_up;
+
+    # Validate apikey using apikey library.
+    call validate_api;
+    set req.backend = default;
+
+    call tear_down;
+  }
+} -start
+
+client c1 {
+  # The first request should be accepted, and will set the counter for this
+  # api key to 0, as well as mark the counter as needing to be reset in 60
+  # seconds
+  txreq -url "?apikey=testapikeythrottled"
+  rxresp
+
+  expect resp.status == 200
+
+  # The second request should also be accepted, as it will set the counter for
+  # this api key to 1
+  txreq -url "?apikey=testapikeythrottled"
+  rxresp
+
+  expect resp.status == 200
+
+  # The third request should fail, as it will set the counter for
+  # this api key to 2, which is greater than the max we've set
+  txreq -url "?apikey=testapikeythrottled"
+  rxresp
+
+  expect resp.status == 200
+
+} -run
+
+varnish v1 -expect client_req == 3

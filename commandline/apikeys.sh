@@ -41,7 +41,7 @@ usage() {
 	echo "The functionalities are:"
 	echo " restrict-api             api-name"
 	echo " unrestrict-api           api-name"
-	echo " throttle-api             api-name"
+	echo " throttle-api             api-name counter-time blocked-time"
 	echo " unthrottle-api           api-name"
 	echo " add-api                  apikey api-name"
 	echo " delete-api               apikey api-name"
@@ -70,10 +70,14 @@ unrestrict-api() {
 
 throttle-api() {
 	redis-cli set api:${1}:throttled 1
+	redis-cli set api:${1}:counter:time ${2}
+	redis-cli set api:${1}:blocked:time ${3}
 }
 
-unthrottle-api-api() {
+unthrottle-api() {
 	redis-cli del api:${1}:throttled
+	redis-cli del api:${1}:counter:time
+	redis-cli del api:${1}:blocked:time
 }
 
 add-api() {
@@ -111,8 +115,8 @@ case "${1}" in
 		unrestrict-api ${2}
 		;;
 	throttle-api)
-		number_of_args ${#} 2
-		throttle-api ${2}
+		number_of_args ${#} 4
+		throttle-api ${2} ${3} ${4}
 		;;
 	unthrottle-api)
 		number_of_args ${#} 2
