@@ -43,6 +43,8 @@ usage() {
 	echo " unrestrict-api           api-name"
 	echo " throttle-api             api-name counter-time blocked-time"
 	echo " unthrottle-api           api-name"
+	echo " set-api-limit         	api-name limit"
+	echo " remove-api-limit      	api-name"
 	echo " add-api                  apikey api-name"
 	echo " delete-api               apikey api-name"
 	echo " block-apikey             apikey api-name time"
@@ -82,6 +84,14 @@ unthrottle-api() {
 	redis-cli del api:${1}:blocked:time
 }
 
+set-apikey-limit() {
+	redis-cli set api:${1}:default_max ${2}
+}
+
+remove-apikey-limit() {
+	redis-cli del api:${1}:default_max
+}
+
 add-api() {
 	redis-cli set key:${1}:api:${2} 1
 }
@@ -99,7 +109,7 @@ unblock-apikey() {
 }
 
 set-apikey-limit() {
-	redis-cli set key:${1}:usage:${2}:max ${3} 1
+	redis-cli set key:${1}:usage:${2}:max ${3}
 }
 
 remove-apikey-limit() {
