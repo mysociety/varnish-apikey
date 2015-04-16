@@ -41,28 +41,30 @@ sub validate_api {
 	# headers: apiname, apikey, token
 	call recognize_apiname_apikey_token;
 
-	# Get apikey variables from redis.
-	call apikey_call_redis_apikey;
+	# If we've recognised an api, get the apikey variables from redis.
+	if (req.http.apiname) {
+		call apikey_call_redis_apikey;
 
-	# Determine how to throttle the request (by api key or client ip)
-	if (req.http.throttled == "1") {
-		if (req.http.apikey_exists == "1") {
-			set req.http.throttle_identity = req.http.apikey;
-		} else {
-			set req.http.throttle_identity = client.ip;
+		# Determine how to throttle the request (by api key or client ip)
+		if (req.http.throttled == "1") {
+			if (req.http.apikey_exists == "1") {
+				set req.http.throttle_identity = req.http.apikey;
+			} else {
+				set req.http.throttle_identity = client.ip;
+			}
+			# Get throttling variables from redis.
+			call apikey_call_redis_throttling;
 		}
-		# Get throttling variables from redis.
-		call apikey_call_redis_throttling;
-	}
 
-	# Check the key
-	if (req.http.restricted == "1") {
-		call apikey_check_apikey;
-	}
+		# Check the key
+		if (req.http.restricted == "1") {
+			call apikey_check_apikey;
+		}
 
-	# Check the usage
-	if (req.http.throttled == "1") {
-		call apikey_check_throttling;
+		# Check the usage
+		if (req.http.throttled == "1") {
+			call apikey_check_throttling;
+		}
 	}
 
 	# Delete the headers.
