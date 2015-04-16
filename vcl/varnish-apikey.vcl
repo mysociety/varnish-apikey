@@ -122,6 +122,7 @@ sub apikey_call_redis_throttling {
 sub apikey_check_apikey {
 	# Check if api key exists.
 	if (req.http.apikey_exists != "1") {
+		call apikey_unset_headers;
 		error 401 "Unknown api key.";
 	}
 }
@@ -147,6 +148,7 @@ sub apikey_check_throttling {
 		}
 	}
 	if (req.http.throttle_blocked == "1") {
+		call apikey_unset_headers;
 		error 401 "Api key temporarily blocked.";
 	}
 }
