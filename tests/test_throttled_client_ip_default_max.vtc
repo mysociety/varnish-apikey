@@ -6,6 +6,7 @@ server s1 {
 } -start
 
 varnish v1 -vcl {
+  import std;
   include "${pwd}/vcl/varnish-apikey.vcl";
 
   backend default {
