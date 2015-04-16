@@ -89,9 +89,14 @@ sub apikey_call_redis_apikey {
 
 # Call redis and get throttling setup
 sub apikey_call_redis_throttling {
-	set req.http.blocked_time   = redis.call("GET api:" + req.http.apiname + ":blocked:time");
-	set req.http.counter_time   = redis.call("GET api:" + req.http.apiname + ":counter:time");
-	set req.http.default_max    = redis.call("GET api:" + req.http.apiname + ":default_max");
+	redis.pipeline();
+	redis.push("GET api:" + req.http.apiname + ":blocked:time");
+	redis.push("GET api:" + req.http.apiname + ":counter:time");
+	redis.push("GET api:" + req.http.apiname + ":default_max");
+
+	set req.http.blocked_time   = redis.pop();
+	set req.http.counter_time   = redis.pop();
+	set req.http.default_max    = redis.pop();
 
 	# Per api.
 	# Use pipelining mode (make all calls first and then get results in bulk).
