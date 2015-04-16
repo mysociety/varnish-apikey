@@ -24,6 +24,7 @@
 
 # Example demostrating how to use the api library
 
+import std;
 include "/etc/varnish/varnish-apikey.vcl";
 
 backend wikipedia {
