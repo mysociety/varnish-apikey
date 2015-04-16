@@ -32,7 +32,6 @@ C{
 }C
 
 import redis;
-import std;
 
 #
 # Public subroutine to be called from user code to validate the api.
