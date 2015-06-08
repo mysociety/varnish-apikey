@@ -1,3 +1,4 @@
+vcl 4.0;
 #
 # Authors: Wojciech Mlynarczyk
 #
@@ -44,7 +45,7 @@ sub recognize_apiname_apikey_token {
 	} else if (req.url ~ "^/apple") {
 		set req.http.apiname = "apple";
 	} else {
-		error 400 "Unknown api.";
+		return (synth(400, "Unknown api."));
 	}
 
 	# Save apikey
@@ -65,5 +66,5 @@ sub vcl_recv {
 	}
 
 	set req.http.host = "en.wikipedia.org";
-	set req.backend = wikipedia;
+	set req.backend_hint = wikipedia;
 }

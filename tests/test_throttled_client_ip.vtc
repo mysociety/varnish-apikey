@@ -39,7 +39,7 @@ varnish v1 -vcl {
   sub vcl_recv {
     # Validate apikey using apikey library.
     call validate_api;
-    set req.backend = default;
+    set req.backend_hint = default;
   }
 } -start
 

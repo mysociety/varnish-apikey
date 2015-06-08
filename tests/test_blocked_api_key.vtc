@@ -41,7 +41,7 @@ varnish v1 -vcl {
   sub vcl_recv {
     # Validate apikey using apikey library.
     call validate_api;
-    set req.backend = default;
+    set req.backend_hint = default;
   }
 } -start
 
@@ -51,5 +51,7 @@ client c1 {
 
   expect resp.status == 401
 } -run
+
+client c1 -run
 
 varnish v1 -expect client_req == 1

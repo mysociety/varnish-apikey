@@ -1,3 +1,4 @@
+vcl 4.0;
 #
 # Authors: Wojciech Mlynarczyk
 #
@@ -23,13 +24,6 @@
 # SUCH DAMAGE.
 
 # Library for authorization based on api key
-
-C{
-#include <time.h>
-#include <sys/time.h>
-#include <stdio.h>
-#include <stdlib.h>
-}C
 
 import redis;
 
@@ -123,7 +117,7 @@ sub apikey_check_apikey {
 	# Check if api key exists.
 	if (req.http.apikey_exists != "1") {
 		call apikey_unset_headers;
-		error 401 "Unknown api key.";
+		return (synth(401, "Unknown api key."));
 	}
 }
 
@@ -149,7 +143,7 @@ sub apikey_check_throttling {
 	}
 	if (req.http.throttle_blocked == "1") {
 		call apikey_unset_headers;
-		error 401 "Api key temporarily blocked.";
+		return (synth(401, "Api key temporarily blocked."));
 	}
 }
 
