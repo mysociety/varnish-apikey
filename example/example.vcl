@@ -51,6 +51,11 @@ sub recognize_apiname_apikey_token {
 	set req.http.apikey = regsub(req.url, ".*[?;]apikey=([^;]*).*", "\1");
 }
 
+sub vcl_init {
+	# Initialise the redis connection
+	redis.init("main", "127.0.0.1:6379", 500, 0, 0, 0, 0, false, 1);
+}
+
 sub vcl_recv {
 	# Validate apikey using apikey library.
 	call validate_api;
