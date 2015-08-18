@@ -22,17 +22,27 @@ varnish v1 -vcl {
   }
 
   sub set_up {
-    redis.send("FLUSHDB");
-    redis.send("SET api:testapi:restricted 1");
-    redis.send("SET key:testapikey:api:testapi 1");
+    redis.command("FLUSHDB");
+    redis.execute();
+
+    redis.command("SET");
+    redis.push("api:testapi:restricted");
+    redis.push("1");
+    redis.execute();
+
+    redis.command("SET");
+    redis.push("key:testapikey:api:testapi");
+    redis.push("1");
+    redis.execute();
   }
 
   sub vcl_init {
-    call set_up;
+    redis.init("main", "${redis_master_address}", 500, 0, 0, 0, 0, false, 1);
   }
 
   sub vcl_recv {
     # Validate apikey using apikey library.
+    call set_up;
     call validate_api;
     set req.backend = default;
   }

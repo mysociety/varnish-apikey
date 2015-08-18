@@ -22,21 +22,47 @@ varnish v1 -vcl {
   }
 
   sub set_up {
-    redis.send("FLUSHDB");
-    redis.send("SET api:testthrottledbyipapi:throttled 1");
-    redis.send("SET api:testthrottledbyipapi:counter:time 60");
-    redis.send("SET api:testthrottledbyipapi:blocked:time 60");
-    redis.send("SET api:testthrottledbyipapi:default_max 60");
+    redis.command("FLUSHDB");
+    redis.execute();
+
+    redis.command("SET");
+    redis.push("api:testthrottledbyipapi:throttled");
+    redis.push("1");
+    redis.execute();
+
+    # Set up all the default throttling settings for the api
+    redis.command("SET");
+    redis.push("api:testthrottledbyipapi:counter:time");
+    redis.push("60");
+    redis.execute();
+
+    redis.command("SET");
+    redis.push("api:testthrottledbyipapi:blocked:time");
+    redis.push("60");
+    redis.execute();
+
+    redis.command("SET");
+    redis.push("api:testthrottledbyipapi:default_max");
+    redis.push("60");
+    redis.execute();
 
     # Set a maximum number of calls to test the throttling works
-    redis.send("SET key:127.0.0.1:usage:testthrottledbyipapi:max 1");
+    redis.command("SET");
+    redis.push("key:127.0.0.1:usage:testthrottledbyipapi:max");
+    redis.push("1");
+    redis.execute();
   }
 
   sub vcl_init {
-    call set_up;
+    redis.init("main", "${redis_master_address}", 500, 0, 0, 0, 0, false, 1);
   }
 
   sub vcl_recv {
+    # Hacky way to run the setup only on the first request because we can't
+    # call it from vcl_init
+    if (req.http.X-Test-Setup == "true") {
+      call set_up;
+    }
     # Validate apikey using apikey library.
     call validate_api;
     set req.backend = default;
@@ -47,7 +73,7 @@ client c1 {
   # The first request should be accepted, and will set the counter for this
   # IP to 0, as well as mark the counter as needing to be reset in 60
   # seconds
-  txreq
+  txreq -hdr "X-Test-Setup: true"
   rxresp
 
   expect resp.status == 200

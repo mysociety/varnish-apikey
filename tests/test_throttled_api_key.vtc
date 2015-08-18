@@ -22,24 +22,54 @@ varnish v1 -vcl {
   }
 
   sub set_up {
-    redis.send("FLUSHDB");
-    redis.send("SET api:testthrottledapi:throttled 1");
+    redis.command("FLUSHDB");
+    redis.execute();
+
+    redis.command("SET");
+    redis.push("api:testthrottledapi:throttled");
+    redis.push("1");
+    redis.execute();
+
     # Set up all the default throttling settings for the api
-    redis.send("SET api:testthrottledapi:counter:time 60");
-    redis.send("SET api:testthrottledapi:blocked:time 60");
-    redis.send("SET api:testthrottledapi:default_max 60");
+    redis.command("SET");
+    redis.push("api:testthrottledapi:counter:time");
+    redis.push("60");
+    redis.execute();
+
+    redis.command("SET");
+    redis.push("api:testthrottledapi:blocked:time");
+    redis.push("60");
+    redis.execute();
+
+    redis.command("SET");
+    redis.push("api:testthrottledapi:default_max");
+    redis.push("60");
+    redis.execute();
+
     # Allow this key to access the api, so that it's used instead of the
     # client's IP to identify them
-    redis.send("SET key:testapikeythrottled:api:testthrottledapi 1");
+    redis.command("SET");
+    redis.push("key:testapikeythrottled:api:testthrottledapi");
+    redis.push("1");
+    redis.execute();
+
     # Set a maximum number of calls to test the throttling works
-    redis.send("SET key:testapikeythrottled:usage:testthrottledapi:max 1");
+    redis.command("SET");
+    redis.push("key:testapikeythrottled:usage:testthrottledapi:max");
+    redis.push("1");
+    redis.execute();
   }
 
   sub vcl_init {
-    call set_up;
+    redis.init("main", "${redis_master_address}", 500, 0, 0, 0, 0, false, 1);
   }
 
   sub vcl_recv {
+    # Hacky way to run the setup only on the first request because we can't
+    # call it from vcl_init
+    if (req.http.X-Test-Setup == "true") {
+      call set_up;
+    }
     # Validate apikey using apikey library.
     call validate_api;
     set req.backend = default;
@@ -50,7 +80,7 @@ client c1 {
   # The first request should be accepted, and will set the counter for this
   # api key to 0, as well as mark the counter as needing to be reset in 60
   # seconds
-  txreq -url "?apikey=testapikeythrottled"
+  txreq -url "?apikey=testapikeythrottled" -hdr "X-Test-Setup: true"
   rxresp
 
   expect resp.status == 200
