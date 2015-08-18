@@ -12,7 +12,7 @@ checking.
 This removes some of the more complicated dependencies, to the point
 that the whole Makefile and bundled libraries could also be removed.
 
-This also updates the Redis Varnish module used to the supported version,
+This also updates the Redis Varnish module used to a better supported version,
 which can be installed independently from Github.
 
 Usage
@@ -84,11 +84,11 @@ sudo apt-get install redis-server varnish libhiredis-dev
 
 **Varnish and Varnish modules**
 * varnish
-* [libvmod-redis](https://github.com/brandonwamboldt/libvmod-redis/)
+* [libvmod-redis](https://github.com/carlosabalde/libvmod-redis)
 
 Installation
 ------------
-Install the [libvmod-redis](https://github.com/brandonwamboldt/libvmod-redis/)
+Install the [libvmod-redis](https://github.com/carlosabalde/libvmod-redis)
 module as per their instructions.
 
 Copy `vcl/varnish-apikey.vcl` to wherever the rest of your Varnish .vcl files
@@ -98,7 +98,6 @@ Run the example
 ---------------
 1. Run varnish
 
-    You can now run Varnish and test the example by typing:
     ```
     cd example
     sudo killall varnishd
@@ -106,14 +105,20 @@ Run the example
     ```
     Varnish will run in the foreground and listen on port 81
 
-2. Check in browser
+2. Run redis
+
+   ```
+   redis-server
+   ```
+
+4. Check in browser
 
     Open the the web browser and check the urls
     - http://localhost:81/tomato
     - http://localhost:81/potato
     They should load articles from Wikipedia on Tomatoes and Potatoes respectively.
 
-3. Restrict api
+5. Restrict api
 
     Add apikeys and restrict access to api using the command tool:
     ```
@@ -122,20 +127,35 @@ Run the example
     ./apikeys.sh add-api myapikey tomato
     ```
 
-4. Check in browser again
+6. Check in browser again
 
     Open the browser and verify that api can only be accessed using an apikey:
     - http://localhost:81/tomato (Should return a 401)
     - http://localhost:81/tomato?apikey=myapikey (Should work as before)
 
+(To see what's happening with redis during this, start a redis monitor
+connection in a new shell window: `redis-cli monitor`).
+
 Testing
 -------
-You can test the .vcl file by running the tests in the `test` directory using
-the `varnishtest` program included with varnish. However, we recommend you use
-[vtctrans](https://github.com/xcir/vtctrans) to make the output more
-understandable. This is just a simple python file which you can run like so:
+Standard varnish tests of the .vcl file are included in the `tests` directory
+along with a shell script that takes care of setting up a redis server for the
+tests and cleaning up after it.
+
+You can use this with the standard `varnishtest` utility included with varnish
+but wee recommend you use [vtctrans](https://github.com/xcir/vtctrans) to make
+the output more understandable.
+
+For example, to run the tests with varnishtest
 ```
-python <path-to>/vtctrans.py tests/*.vtc
+tests/runner.sh varnishtest tests/*.vtc
 ```
+
+Or with vtctrans:
+For example, to run the tests with varnishtest
+```
+tests/runner.sh python <path-to-vtctrans>/vtctrans.py tests/*.vtc
+```
+
 Because of the way `varnishtest` does includes, you must run this from the
 project root directory, otherwise it won't find the .vcl file to test.
