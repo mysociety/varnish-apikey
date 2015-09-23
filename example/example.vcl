@@ -48,7 +48,7 @@ sub recognize_apiname_apikey_token {
 	}
 
 	# Save apikey
-	set req.http.apikey = regsub(req.url, ".*[?;]apikey=([^;]*).*", "\1");
+	set req.http.apikey = regsub(req.url, "^.*(\?|&)apikey=([^&;]*).*", "\2");
 }
 
 sub vcl_init {
