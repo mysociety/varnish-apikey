@@ -62,7 +62,7 @@ sub validate_api {
             call apikey_check_apikey;
         }
 
-        # Check the usage
+        # Check the rate limit
         if (req.http.throttled == "1") {
             call apikey_check_throttling;
         }
@@ -96,7 +96,7 @@ sub apikey_call_redis_throttling {
     # Set up some default values, because we need these to be present for
     # throttling to work.
     set req.http.blocked_time = 60;
-    set req.http.counter_time = 60;
+    set req.http.ratelimit_time = 60;
     set req.http.default_max  = 60;
 
     # Get some info about the general throttling setup for this api
@@ -115,7 +115,7 @@ sub apikey_call_redis_throttling {
             set req.http.blocked_time = redis.get_array_reply_value(0);
         }
         if (!redis.array_reply_is_nil(1)) {
-            set req.http.counter_time = redis.get_array_reply_value(1);
+            set req.http.ratelimit_time = redis.get_array_reply_value(1);
         }
         if (!redis.array_reply_is_nil(2)) {
             set req.http.default_max = redis.get_array_reply_value(2);
@@ -125,11 +125,11 @@ sub apikey_call_redis_throttling {
     # Get the throttling details for this key specifically
     # Again, set a default in case Redis doesn't return anything (more likely
     # this time, e.g. if there's no api key at all).
-    set req.http.counter_max = req.http.default_max;
+    set req.http.ratelimit_max = req.http.default_max;
     redis.command("MGET");
     redis.push("key:" + req.http.throttle_identity + ":api:" + req.http.apiname + ":blocked");
-    redis.push("key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":max");
-    redis.push("key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":reset");
+    redis.push("key:" + req.http.throttle_identity + ":ratelimit:" + req.http.apiname + ":max");
+    redis.push("key:" + req.http.throttle_identity + ":ratelimit:" + req.http.apiname + ":reset");
     redis.execute();
     # We're extra careful about only setting these values if redis returned
     # something and the values are not nil because VMODs have some odd nil
@@ -141,19 +141,19 @@ sub apikey_call_redis_throttling {
             set req.http.throttle_blocked = redis.get_array_reply_value(0);
         }
         if (!redis.array_reply_is_nil(1)) {
-            set req.http.counter_max = redis.get_array_reply_value(1);
+            set req.http.ratelimit_max = redis.get_array_reply_value(1);
         }
         if (!redis.array_reply_is_nil(2)) {
-            set req.http.counter_reset = redis.get_array_reply_value(2);
+            set req.http.ratelimit_reset = redis.get_array_reply_value(2);
         }
     }
 
-    # Increment the usage counter (returns the new usage count)
+    # Increment the rate limit counter (returns the new count)
     redis.command("INCR");
-    redis.push("key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":count");
+    redis.push("key:" + req.http.throttle_identity + ":ratelimit:" + req.http.apiname + ":count");
     redis.execute();
     # It doesn't matter so much if this fails, we'll just assume it's 0 later
-    set req.http.counter_count = redis.get_reply();
+    set req.http.ratelimit_count = redis.get_reply();
 }
 
 sub apikey_check_apikey {
@@ -166,25 +166,25 @@ sub apikey_check_apikey {
 
 sub apikey_check_throttling {
     # Check if should reset throttling counter.
-    if (req.http.counter_reset != "1") {
+    if (req.http.ratelimit_reset != "1") {
         # Reset counter.
         redis.command("SET");
-        redis.push("key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":count");
+        redis.push("key:" + req.http.throttle_identity + ":ratelimit:" + req.http.apiname + ":count");
         redis.push("0");
         redis.execute();
 
         # Set timer to reset the counter
         redis.command("SETEX");
-        redis.push("key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":reset");
-        redis.push(req.http.counter_time);
+        redis.push("key:" + req.http.throttle_identity + ":ratelimit:" + req.http.apiname + ":reset");
+        redis.push(req.http.ratelimit_time);
         redis.push("1");
         redis.execute();
 
     } else {
         # If there's a max, and the user has exceeded the number of calls then
         # block them.
-        if (req.http.counter_max) {
-            if (std.integer(req.http.counter_count, 0) > std.integer(req.http.counter_max, 0)) {
+        if (std.integer(req.http.ratelimit_max, 0) > 0) {
+            if (std.integer(req.http.ratelimit_count, 0) > std.integer(req.http.ratelimit_max, 0)) {
                 # Block api key for some time
                 redis.command("SETEX");
                 redis.push("key:" + req.http.throttle_identity + ":api:" + req.http.apiname + ":blocked");
@@ -194,7 +194,7 @@ sub apikey_check_throttling {
 
                 # Reset timer
                 redis.command("DEL");
-                redis.push("key:" + req.http.throttle_identity + ":usage:" + req.http.apiname + ":reset");
+                redis.push("key:" + req.http.throttle_identity + ":ratelimit:" + req.http.apiname + ":reset");
                 redis.execute();
                 set req.http.throttle_blocked = "1";
             }
@@ -207,19 +207,21 @@ sub apikey_check_throttling {
 }
 
 sub apikey_unset_headers {
+    # General
     unset req.http.apiname;
     unset req.http.apikey;
     unset req.http.restricted;
     unset req.http.throttled;
     unset req.http.apikey_exists;
+    # Rate limiting
     if (req.http.throttled == "1") {
         unset req.http.throttle_blocked;
         unset req.http.blocked_time;
-        unset req.http.counter_time;
+        unset req.http.ratelimit_time;
         unset req.http.default_max;
         unset req.http.throttle_identity;
-        unset req.http.counter_count;
-        unset req.http.counter_max;
-        unset req.http.counter_reset;
+        unset req.http.ratelimit_count;
+        unset req.http.ratelimit_max;
+        unset req.http.ratelimit_reset;
     }
 }

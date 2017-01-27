@@ -66,7 +66,7 @@ their IP address if not.
 
 Optionally, you can also set per-user throttle limits:
 
-`SET key:<user-identity>:usage:<your-api-identifier>:max <number-of-hits>`
+`SET key:<user-identity>:ratelimit:<your-api-identifier>:max <number-of-hits>`
 
 In this case `<user-identity>` can be either their api key, or an IP address.
 

@@ -109,11 +109,11 @@ unblock-apikey() {
 }
 
 set-apikey-limit() {
-	redis-cli set key:${1}:usage:${2}:max ${3}
+	redis-cli set key:${1}:ratelimit:${2}:max ${3}
 }
 
 remove-apikey-limit() {
-	redis-cli del key:${1}:usage:${2}:max
+	redis-cli del key:${1}:ratelimit:${2}:max
 }
 
 clear-database() {

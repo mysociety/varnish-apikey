@@ -55,7 +55,7 @@ varnish v1 -vcl {
 
     # Set a maximum number of calls to test the throttling works
     redis.command("SET");
-    redis.push("key:testapikeythrottled:usage:testthrottledapi:max");
+    redis.push("key:testapikeythrottled:ratelimit:testthrottledapi:max");
     redis.push("1");
     redis.execute();
   }
