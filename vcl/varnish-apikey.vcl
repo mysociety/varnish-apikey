@@ -202,7 +202,7 @@ sub apikey_check_throttling {
     }
     if (req.http.throttle_blocked == "1") {
         call apikey_unset_headers;
-        error 401 "Api key temporarily blocked.";
+        error 403 "Api key temporarily blocked.";
     }
 }
 

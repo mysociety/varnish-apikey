@@ -86,7 +86,7 @@ client c1 {
   txreq
   rxresp
 
-  expect resp.status == 401
+  expect resp.status == 403
 
 } -run
 

@@ -84,7 +84,7 @@ client c1 {
   txreq -url "?apikey=testapikeyblocked"
   rxresp
 
-  expect resp.status == 401
+  expect resp.status == 403
 } -run
 
 varnish v1 -expect client_req == 1
