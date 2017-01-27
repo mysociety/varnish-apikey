@@ -72,3 +72,14 @@ sub vcl_recv {
 	set req.http.host = "en.wikipedia.org";
 	set req.backend = wikipedia;
 }
+
+sub vcl_deliver {
+    if (req.http.X-Quota-Limit) {
+        set resp.http.X-Quota-Limit = req.http.X-Quota-Limit;
+        unset req.http.X-Quota-Limit;
+    }
+    if (req.http.X-Quota-Current) {
+        set resp.http.X-Quota-Current = req.http.X-Quota-Current;
+        unset req.http.X-Quota-Current;
+    }
+}
