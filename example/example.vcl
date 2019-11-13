@@ -1,3 +1,4 @@
+vcl 4.0;
 #
 # Authors: Wojciech Mlynarczyk
 #
@@ -25,7 +26,7 @@
 # Example demostrating how to use the api library
 
 import std;
-include "/etc/varnish/varnish-apikey.vcl";
+import redis;
 
 backend wikipedia {
 	.host = "91.198.174.192";
@@ -44,7 +45,7 @@ sub recognize_apiname_apikey_token {
 	} else if (req.url ~ "^/apple") {
 		set req.http.apiname = "apple";
 	} else {
-		error 400 "Unknown api.";
+		return(synth(400, "Unknown api."));
 	}
 
 	# Save apikey
@@ -53,8 +54,10 @@ sub recognize_apiname_apikey_token {
 
 sub vcl_init {
 	# Initialise the redis connection
-	redis.init("main", "127.0.0.1:6379", 500, 0, 0, 0, 0, false, 1);
+	new db = redis.db(location="127.0.0.1:6379", type=master, connection_timeout=500, shared_connections=false, max_connections=1);
 }
+
+include "/etc/varnish/varnish-apikey.vcl";
 
 sub vcl_recv {
 	# Validate apikey using apikey library.
@@ -70,7 +73,7 @@ sub vcl_recv {
 	}
 
 	set req.http.host = "en.wikipedia.org";
-	set req.backend = wikipedia;
+	set req.backend_hint = wikipedia;
 }
 
 sub vcl_deliver {

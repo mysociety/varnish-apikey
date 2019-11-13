@@ -24,14 +24,7 @@
 
 # Library for authorization based on api key
 
-C{
-#include <time.h>
-#include <sys/time.h>
-#include <stdio.h>
-#include <stdlib.h>
-}C
-
-import redis;
+#import redis;
 
 #
 # Public subroutine to be called from user code to validate the api.
@@ -78,16 +71,16 @@ sub validate_api {
 # Call redis and get all keys.
 sub apikey_call_redis_apikey {
     # Get the three keys we need with a multi-get
-    redis.command("MGET");
-    redis.push("api:" + req.http.apiname + ":restricted");
-    redis.push("api:" + req.http.apiname + ":throttled");
-    redis.push("key:" + req.http.apikey + ":api:" + req.http.apiname);
-    redis.execute();
-    if ((redis.reply_is_array()) &&
-        (redis.get_array_reply_length() == 3)) {
-        set req.http.restricted    = redis.get_array_reply_value(0);
-        set req.http.throttled     = redis.get_array_reply_value(1);
-        set req.http.apikey_user = redis.get_array_reply_value(2);
+    db.command("MGET");
+    db.push("api:" + req.http.apiname + ":restricted");
+    db.push("api:" + req.http.apiname + ":throttled");
+    db.push("key:" + req.http.apikey + ":api:" + req.http.apiname);
+    db.execute();
+    if ((db.reply_is_array()) &&
+        (db.get_array_reply_length() == 3)) {
+        set req.http.restricted    = db.get_array_reply_value(0);
+        set req.http.throttled     = db.get_array_reply_value(1);
+        set req.http.apikey_user = db.get_array_reply_value(2);
     }
     # Note: if we didn't get the correct reply, (i.e. it wasn't an array of
     # 3 values but was an error or something) these headers will just be unset
@@ -109,25 +102,25 @@ sub apikey_call_redis_throttling {
     set req.http.default_max  = 60;
 
     # Get some info about the general throttling setup for this api
-    redis.command("MGET");
-    redis.push("api:" + req.http.apiname + ":blocked:time");
-    redis.push("api:" + req.http.apiname + ":counter:time");
-    redis.push("api:" + req.http.apiname + ":default_max");
-    redis.execute();
+    db.command("MGET");
+    db.push("api:" + req.http.apiname + ":blocked:time");
+    db.push("api:" + req.http.apiname + ":counter:time");
+    db.push("api:" + req.http.apiname + ":default_max");
+    db.execute();
     # We're extra careful about only setting these values if redis returned
     # something and the values are not nil because VMODs have some odd nil
     # handling (e.g. https://www.varnish-cache.org/lists/pipermail/varnish-misc/2014-November/024084.html)
     # that I'd rather not try to decipher.
-    if ((redis.reply_is_array()) &&
-        (redis.get_array_reply_length() == 3)) {
-        if (!redis.array_reply_is_nil(0)) {
-            set req.http.blocked_time = redis.get_array_reply_value(0);
+    if ((db.reply_is_array()) &&
+        (db.get_array_reply_length() == 3)) {
+        if (!db.array_reply_is_nil(0)) {
+            set req.http.blocked_time = db.get_array_reply_value(0);
         }
-        if (!redis.array_reply_is_nil(1)) {
-            set req.http.ratelimit_time = redis.get_array_reply_value(1);
+        if (!db.array_reply_is_nil(1)) {
+            set req.http.ratelimit_time = db.get_array_reply_value(1);
         }
-        if (!redis.array_reply_is_nil(2)) {
-            set req.http.default_max = redis.get_array_reply_value(2);
+        if (!db.array_reply_is_nil(2)) {
+            set req.http.default_max = db.get_array_reply_value(2);
         }
     }
 
@@ -135,46 +128,46 @@ sub apikey_call_redis_throttling {
     # Again, set a default in case Redis doesn't return anything (more likely
     # this time, e.g. if there's no api key at all).
     set req.http.ratelimit_max = req.http.default_max;
-    redis.command("MGET");
-    redis.push("key:" + req.http.throttle_identity + ":api:" + req.http.apiname + ":blocked");
-    redis.push("key:" + req.http.throttle_identity + ":ratelimit:" + req.http.apiname + ":max");
-    redis.push("key:" + req.http.throttle_identity + ":ratelimit:" + req.http.apiname + ":reset");
-    redis.execute();
+    db.command("MGET");
+    db.push("key:" + req.http.throttle_identity + ":api:" + req.http.apiname + ":blocked");
+    db.push("key:" + req.http.throttle_identity + ":ratelimit:" + req.http.apiname + ":max");
+    db.push("key:" + req.http.throttle_identity + ":ratelimit:" + req.http.apiname + ":reset");
+    db.execute();
     # We're extra careful about only setting these values if redis returned
     # something and the values are not nil because VMODs have some odd nil
     # handling (e.g. https://www.varnish-cache.org/lists/pipermail/varnish-misc/2014-November/024084.html)
     # that I'd rather not try to decipher.
-    if ((redis.reply_is_array()) &&
-        (redis.get_array_reply_length() == 3)) {
-        if (!redis.array_reply_is_nil(0)) {
-            set req.http.throttle_blocked = redis.get_array_reply_value(0);
+    if ((db.reply_is_array()) &&
+        (db.get_array_reply_length() == 3)) {
+        if (!db.array_reply_is_nil(0)) {
+            set req.http.throttle_blocked = db.get_array_reply_value(0);
         }
-        if (!redis.array_reply_is_nil(1)) {
-            set req.http.ratelimit_max = redis.get_array_reply_value(1);
+        if (!db.array_reply_is_nil(1)) {
+            set req.http.ratelimit_max = db.get_array_reply_value(1);
         }
-        if (!redis.array_reply_is_nil(2)) {
-            set req.http.ratelimit_reset = redis.get_array_reply_value(2);
+        if (!db.array_reply_is_nil(2)) {
+            set req.http.ratelimit_reset = db.get_array_reply_value(2);
         }
     }
 
     # Increment this key's quota usage (just for stats, user quota used for limiting)
-    redis.command("INCR");
-    redis.push("key:" + req.http.throttle_identity + ":quota:" + req.http.apiname + ":count");
-    redis.execute();
+    db.command("INCR");
+    db.push("key:" + req.http.throttle_identity + ":quota:" + req.http.apiname + ":count");
+    db.execute();
 
     # Increment the rate limit counter (returns the new count)
-    redis.command("INCR");
-    redis.push("key:" + req.http.throttle_identity + ":ratelimit:" + req.http.apiname + ":count");
-    redis.execute();
+    db.command("INCR");
+    db.push("key:" + req.http.throttle_identity + ":ratelimit:" + req.http.apiname + ":count");
+    db.execute();
     # It doesn't matter so much if this fails, we'll just assume it's 0 later
-    set req.http.ratelimit_count = redis.get_reply();
+    set req.http.ratelimit_count = db.get_reply();
 }
 
 sub apikey_check_apikey {
     # Check if api key exists.
     if (!req.http.apikey_user || req.http.apikey_user == "") {
         call apikey_unset_headers;
-        error 401 "Unknown api key.";
+        return(synth(401, "Unknown api key."));
     }
 }
 
@@ -182,17 +175,17 @@ sub apikey_check_throttling {
     # Check if should reset throttling counter.
     if (req.http.ratelimit_reset != "1") {
         # Reset counter.
-        redis.command("SET");
-        redis.push("key:" + req.http.throttle_identity + ":ratelimit:" + req.http.apiname + ":count");
-        redis.push("0");
-        redis.execute();
+        db.command("SET");
+        db.push("key:" + req.http.throttle_identity + ":ratelimit:" + req.http.apiname + ":count");
+        db.push("0");
+        db.execute();
 
         # Set timer to reset the counter
-        redis.command("SETEX");
-        redis.push("key:" + req.http.throttle_identity + ":ratelimit:" + req.http.apiname + ":reset");
-        redis.push(req.http.ratelimit_time);
-        redis.push("1");
-        redis.execute();
+        db.command("SETEX");
+        db.push("key:" + req.http.throttle_identity + ":ratelimit:" + req.http.apiname + ":reset");
+        db.push(req.http.ratelimit_time);
+        db.push("1");
+        db.execute();
 
     } else {
         # If there's a max, and the user has exceeded the number of calls then
@@ -200,23 +193,23 @@ sub apikey_check_throttling {
         if (std.integer(req.http.ratelimit_max, 0) > 0) {
             if (std.integer(req.http.ratelimit_count, 0) > std.integer(req.http.ratelimit_max, 0)) {
                 # Block api key for some time
-                redis.command("SETEX");
-                redis.push("key:" + req.http.throttle_identity + ":api:" + req.http.apiname + ":blocked");
-                redis.push(req.http.blocked_time);
-                redis.push("1");
-                redis.execute();
+                db.command("SETEX");
+                db.push("key:" + req.http.throttle_identity + ":api:" + req.http.apiname + ":blocked");
+                db.push(req.http.blocked_time);
+                db.push("1");
+                db.execute();
 
                 # Reset timer
-                redis.command("DEL");
-                redis.push("key:" + req.http.throttle_identity + ":ratelimit:" + req.http.apiname + ":reset");
-                redis.execute();
+                db.command("DEL");
+                db.push("key:" + req.http.throttle_identity + ":ratelimit:" + req.http.apiname + ":reset");
+                db.execute();
                 set req.http.throttle_blocked = "1";
             }
         }
     }
     if (req.http.throttle_blocked == "1") {
         call apikey_unset_headers;
-        error 403 "Api key temporarily blocked.";
+        return(synth(403, "Api key temporarily blocked."));
     }
 }
 
@@ -230,39 +223,39 @@ sub apikey_check_quota {
     set req.http.X-Quota-Limit = 50;
 
     # Get the quota details for this key's user
-    redis.command("MGET");
-    redis.push("user:" + req.http.quota_identity + ":quota:" + req.http.apiname + ":blocked");
-    redis.push("user:" + req.http.quota_identity + ":quota:" + req.http.apiname + ":max");
-    redis.execute();
-    if ((redis.reply_is_array()) &&
-        (redis.get_array_reply_length() == 2)) {
-        if (!redis.array_reply_is_nil(0)) {
-            set req.http.quota_blocked = redis.get_array_reply_value(0);
+    db.command("MGET");
+    db.push("user:" + req.http.quota_identity + ":quota:" + req.http.apiname + ":blocked");
+    db.push("user:" + req.http.quota_identity + ":quota:" + req.http.apiname + ":max");
+    db.execute();
+    if ((db.reply_is_array()) &&
+        (db.get_array_reply_length() == 2)) {
+        if (!db.array_reply_is_nil(0)) {
+            set req.http.quota_blocked = db.get_array_reply_value(0);
         }
-        if (!redis.array_reply_is_nil(1)) {
-            set req.http.X-Quota-Limit = redis.get_array_reply_value(1);
+        if (!db.array_reply_is_nil(1)) {
+            set req.http.X-Quota-Limit = db.get_array_reply_value(1);
         }
     }
 
     # Increment the quota limit counter (returns the new count)
-    redis.command("INCR");
-    redis.push("user:" + req.http.quota_identity + ":quota:" + req.http.apiname + ":count");
-    redis.execute();
-    set req.http.X-Quota-Current = redis.get_reply();
+    db.command("INCR");
+    db.push("user:" + req.http.quota_identity + ":quota:" + req.http.apiname + ":count");
+    db.execute();
+    set req.http.X-Quota-Current = db.get_reply();
 
     # If the user has exceeded the maximum number of calls then block them.
     if (std.integer(req.http.X-Quota-Limit, 0) > 0) {
         if (std.integer(req.http.X-Quota-Current, 0) > std.integer(req.http.X-Quota-Limit, 0)) {
             # Block API key/IP address
-            redis.command("SET");
-            redis.push("user:" + req.http.quota_identity + ":quota:" + req.http.apiname + ":blocked");
-            redis.push("1");
-            redis.execute();
+            db.command("SET");
+            db.push("user:" + req.http.quota_identity + ":quota:" + req.http.apiname + ":blocked");
+            db.push("1");
+            db.execute();
             if (!req.http.apikey_user || req.http.apikey_user == "") {
-                redis.command("SADD");
-                redis.push("api:" + req.http.apiname + ":blocked_ips");
-                redis.push(req.http.client_ip);
-                redis.execute();
+                db.command("SADD");
+                db.push("api:" + req.http.apiname + ":blocked_ips");
+                db.push(req.http.client_ip);
+                db.execute();
             }
             set req.http.quota_blocked = "1";
         }
@@ -270,7 +263,7 @@ sub apikey_check_quota {
 
     if (req.http.quota_blocked == "1") {
         call apikey_unset_headers;
-        error 403 "Usage limit reached.";
+        return(synth(403, "Usage limit reached."));
     }
 }
 
