@@ -1,5 +1,4 @@
-varnish-apikey
-==============
+# varnish-apikey
 
 Originally from https://code.google.com/p/varnish-apikey/, forked from
 https://github.com/thecodeassassin/varnish-apikey and simplified.
@@ -15,8 +14,8 @@ that the whole Makefile and bundled libraries could also be removed.
 This also updates the Redis Varnish module used to a better supported version,
 which can be installed independently from Github.
 
-Usage
------
+## Usage
+
 This provides a set of library functions that can be included into your
 Varnish .vcl file. A basic example is included, but you probably want to
 customise this to suit. Essentially, you include our VCL file, define a
@@ -30,7 +29,7 @@ examples use the direct Redis commands for simplicity, but there is also a
 command-line tool that gives access to these various functions with a slightly
 simpler interface).
 
-## Restricting access
+### Restricting access
 To only allow users with valid api keys to access your api:
 
 `SET api:<your-api-identifier>:restricted 1`
@@ -39,7 +38,7 @@ After this, enable access for specific keys via:
 
 `SET key:<the-key>:api:<your-api-identifier> 1`
 
-## Throttling users
+### Throttling users
 To enable throttling (rate limiting) of your api:
 
 `SET api:<your-api-identifier>:throttle 1`
@@ -70,32 +69,36 @@ Optionally, you can also set per-user throttle limits:
 
 In this case `<user-identity>` can be either their api key, or an IP address.
 
+## Installation
+This repository contains a `Dockerfile` that will build a container with all the dependencies including a copy of `libvmod-redis` and setup completed.
 
-Dependencies
-------------
+### Dependencies
 (For Ubuntu/Debian)
 ```
 sudo apt-get install redis-server varnish libhiredis-dev
 ```
-
-**Redis**
+### Redis
 * redis-server
 * libhiredis-dev - [hiredis](https://github.com/redis/hiredis) - minimalistic C client for Redis
 
-**Varnish and Varnish modules**
+### Varnish and Varnish modules
 * varnish
 * [libvmod-redis](https://github.com/carlosabalde/libvmod-redis)
 
-Installation
-------------
+### Setup
 Install the [libvmod-redis](https://github.com/carlosabalde/libvmod-redis)
 module as per their instructions.
 
 Copy `vcl/varnish-apikey.vcl` to wherever the rest of your Varnish .vcl files
 live, probably `/etc/varnish/varnish-apikey.vcl`.
 
-Run the example
----------------
+## Run the example
+Assuming you have Docker and docker-compose installed, the example can be run with `script/server`.
+
+`script/console` will print output from Redis to the screen and `script/console --docker` from the container as a whole.
+
+The container will be available at `localhost:8001`, so the port to use in the examples below will depend on whether you are running locally (port 81) or via Docker (port 8001).
+
 1. Run varnish
 
     ```
@@ -113,12 +116,18 @@ Run the example
 
 4. Check in browser
 
-    Open the the web browser and check the urls
-    - http://localhost:81/tomato
-    - http://localhost:81/potato
+    Open the the web browser and check the urls:
+    - http://localhost:8001/tomato
+    - http://localhost:8001/potato
     They should load articles from Wikipedia on Tomatoes and Potatoes respectively.
 
 5. Restrict api
+
+	If you are using the Docker container, you'll need to connect to it and run these commands from within it.
+	
+	```
+	docker exec -it varnish-apikey_server /bin/sh -c "/home/builder/varnish-apikey/commandline/apikeys.sh <arguments>"
+	```
 
     Add apikeys and restrict access to api using the command tool:
     ```
@@ -130,32 +139,29 @@ Run the example
 6. Check in browser again
 
     Open the browser and verify that api can only be accessed using an apikey:
-    - http://localhost:81/tomato (Should return a 401)
-    - http://localhost:81/tomato?apikey=myapikey (Should work as before)
+    - http://localhost:8001/tomato (Should return a 401)
+    - http://localhost:8001/tomato?apikey=myapikey (Should work as before)
 
 (To see what's happening with redis during this, start a redis monitor
-connection in a new shell window: `redis-cli monitor`).
+connection in a new shell window: `redis-cli monitor`, or run `script/console`).
 
-Testing
--------
+## Testing
 Standard varnish tests of the .vcl file are included in the `tests` directory
-along with a shell script that takes care of setting up a redis server for the
+along with a shell script that takes care of setting up a Redis server for the
 tests and cleaning up after it.
 
-You can use this with the standard `varnishtest` utility included with varnish
-but wee recommend you use [vtctrans](https://github.com/xcir/vtctrans) to make
-the output more understandable.
+You can use this with the standard `varnishtest` utility included with varnish but we recommend you use [vtctrans](https://github.com/xcir/vtctrans) to make the output more understandable.
 
-For example, to run the tests with varnishtest
+To run the tests directly with varnishtest, just run `script/test`, or directly with:
+
 ```
 tests/runner.sh varnishtest tests/*.vtc
 ```
 
-Or with vtctrans:
-For example, to run the tests with varnishtest
+Or with vtctrans, run `script/test --vtctrans`, or directly with:
+
 ```
 tests/runner.sh python <path-to-vtctrans>/vtctrans.py tests/*.vtc
 ```
 
-Because of the way `varnishtest` does includes, you must run this from the
-project root directory, otherwise it won't find the .vcl file to test.
+Because of the way `varnishtest` does includes, you must run this from the project root directory, otherwise it won't find the `.vcl` file to test.

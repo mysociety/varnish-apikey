@@ -1,0 +1,13 @@
+#!/bin/sh
+#
+# build: build some docker images
+#
+
+set -e 
+
+cd "$(dirname "$0")/.."
+
+for image in server test ; do
+  echo "==> Building ${image} image..."
+  docker-compose -f ${image}.yml build
+done

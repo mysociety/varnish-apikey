@@ -1,0 +1,20 @@
+version: '3.7'
+
+x-test-defaults:
+  &test-defaults
+  build: .
+  container_name: test
+  volumes:
+    - ./:/home/builder/varnish-apikey
+    - ./vcl/varnish-apikey.vcl:/etc/varnish/varnish-apikey.vcl
+  working_dir: /home/builder/varnish-apikey
+  
+
+services:
+  test:
+    <<: *test-defaults
+    command: tests/runner.sh varnishtest tests/*.vtc
+
+  vtctrans:
+    <<: *test-defaults
+    command: tests/runner.sh python ../vtctrans/vtctrans.py tests/*.vtc

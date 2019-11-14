@@ -1,0 +1,10 @@
+version: '3'
+services:
+  server:
+    build: .
+    container_name: varnish-apikey_server
+    volumes:
+      - ./:/home/builder/varnish-apikey
+      - ./vcl/varnish-apikey.vcl:/etc/varnish/varnish-apikey.vcl
+    ports:
+      - 8001:81

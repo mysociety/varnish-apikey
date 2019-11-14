@@ -1,0 +1,15 @@
+#!/bin/sh
+#
+# server: start a server
+#
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+if [ "$1" == "--stop" ] ; then
+  docker-compose -f server.yml down
+else
+  docker-compose -f server.yml up -d
+fi
+

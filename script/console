@@ -1,0 +1,18 @@
+#!/bin/sh
+#
+# console: attach to server console
+#
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+echo "==> Checking server status..."
+script/server
+sleep 2
+
+if [ "$1" == "--docker" ]; then
+  docker logs varnish-apikey_server -f
+else
+  docker exec -it varnish-apikey_server /bin/sh -c "/usr/bin/redis-cli monitor"
+fi
