@@ -7,6 +7,17 @@ server s1 {
 
 varnish v1 -vcl {
   import std;
+  import redis;
+
+  sub vcl_init {
+    new db = redis.db(
+        location="${redis_master_address}",
+        type=master,
+        connection_timeout=500,
+        shared_connections=false,
+        max_connections=1);
+  }
+
   include "${pwd}/vcl/varnish-apikey.vcl";
 
   backend default {
@@ -22,35 +33,31 @@ varnish v1 -vcl {
   }
 
   sub set_up {
-    redis.command("FLUSHDB");
-    redis.execute();
+    db.command("FLUSHDB");
+    db.execute();
 
-    redis.command("SET");
-    redis.push("api:testthrottledbyipapidefault:throttled");
-    redis.push("1");
-    redis.execute();
+    db.command("SET");
+    db.push("api:testthrottledbyipapidefault:throttled");
+    db.push("1");
+    db.execute();
 
     # Set up all the default throttling settings for the api
-    redis.command("SET");
-    redis.push("api:testthrottledbyipapidefault:counter:time");
-    redis.push("60");
-    redis.execute();
+    db.command("SET");
+    db.push("api:testthrottledbyipapidefault:counter:time");
+    db.push("60");
+    db.execute();
 
-    redis.command("SET");
-    redis.push("api:testthrottledbyipapidefault:blocked:time");
-    redis.push("60");
-    redis.execute();
+    db.command("SET");
+    db.push("api:testthrottledbyipapidefault:blocked:time");
+    db.push("60");
+    db.execute();
 
     # Set the default_max for the api to 1, but don't set a specific max for
     # the user
-    redis.command("SET");
-    redis.push("api:testthrottledbyipapidefault:default_max");
-    redis.push("1");
-    redis.execute();
-  }
-
-  sub vcl_init {
-    redis.init("main", "${redis_master_address}", 500, 0, 0, 0, 0, false, 1);
+    db.command("SET");
+    db.push("api:testthrottledbyipapidefault:default_max");
+    db.push("1");
+    db.execute();
   }
 
   sub vcl_recv {
@@ -61,7 +68,7 @@ varnish v1 -vcl {
     }
     # Validate apikey using apikey library.
     call validate_api;
-    set req.backend = default;
+    set req.backend_hint = default;
   }
 } -start
 

@@ -7,6 +7,17 @@ server s1 {
 
 varnish v1 -vcl {
   import std;
+  import redis;
+
+  sub vcl_init {
+    new db = redis.db(
+        location="${redis_master_address}",
+        type=master,
+        connection_timeout=500,
+        shared_connections=false,
+        max_connections=1);
+  }
+
   include "${pwd}/vcl/varnish-apikey.vcl";
 
   backend default {
@@ -25,7 +36,7 @@ varnish v1 -vcl {
       # Validate apikey using apikey library.
       # Note - the api has't been protected in any way
       call validate_api;
-      set req.backend = default;
+      set req.backend_hint = default;
   }
 } -start
 
