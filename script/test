@@ -7,7 +7,7 @@ set -e
 
 cd "$(dirname "$0")/.."
 
-if [ "$1" == "vtctrans" ] ; then
+if [ "$1" == "--vtctrans" ] ; then
   docker-compose -f test.yml run vtctrans
 else
   docker-compose -f test.yml run test
